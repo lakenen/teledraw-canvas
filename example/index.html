@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>Teledraw Canvas</title>
+	<style type="text/css">
+		html, body {
+			background: #888;
+		}
+		
+		canvas {
+			background-color: white;
+		}
+		
+	</style>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+	<script type="text/javascript" src="teledraw-canvas.js"></script>
+	<script type="text/javascript">
+		var c;
+		$(function () {
+			c = new TeledrawCanvas('#test-canvas');
+		});
+	</script>
+
+</head>
+<body>
+	<h1>Teledraw Canvas</h1>
+	<div id="container">
+		<canvas id="test-canvas" width="800" height="600">Oh crap... your browser doesn't support canvas!</canvas>
+	</div>
+	<button onclick="c.setTool('pencil')">pencil</button>
+	<button onclick="c.setTool('eraser')">eraser</button>
+	<button onclick="c.setTool('pencil');c.setHexColor('#000')">black</button>
+	<button onclick="c.setTool('pencil');c.setHexColor('#f00')">red</button>
+	<button onclick="c.setTool('pencil');c.setHexColor('#00b')">blue</button>
+	<button onclick="c.setTool('pencil');c.setHexColor('#0b0')">green</button>
+	<button onclick="c.setStrokeSize(c.state.strokeSize+1000)">bigger</button>
+	<button onclick="c.setStrokeSize(c.state.strokeSize-1000)">smaller</button>
+	<button onclick="c.clear()">clear</button>
+	<button onclick="c.undo()">undo</button>
+	<button onclick="c.redo()">redo</button>
+</body>
+</html>

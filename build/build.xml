@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<project name="canvas" basedir="../" default="release">
+
+	<target name="build-js">
+		<concat destfile="${outputpath}">
+			<fileset dir="${basedir}/src" includes="teledraw-canvas.js"/>
+			<fileset dir="${basedir}/src/canvas" includes="*.js" excludes="tools/*"/>
+			<fileset dir="${basedir}/src/canvas/tools" includes="*.js"/>
+		</concat>
+	</target>
+	
+	<target name="debug">
+		<antcall target="build-js">
+			<param name="outputpath" value="${basedir}/example/teledraw-canvas.js"/>
+		</antcall>
+	</target>
+
+	<target name="release">
+		<antcall target="build-js">
+			<param name="outputpath" value="${basedir}/teledraw-canvas.js"/>
+		</antcall>
+		<java jar="${basedir}/build/yuicompressor-2.4.7.jar" fork="true">
+			<arg line="'${basedir}/teledraw-canvas.js'"/>
+			<arg line="-o '${basedir}/teledraw-canvas.min.js'"/>
+		</java>
+	</target>
+
+</project>
