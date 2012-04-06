@@ -3,7 +3,6 @@
  */
 (function (TeledrawCanvas) {
 	var Tool = function () {};
-	var clamp = TeledrawCanvas.clamp;
 
 	Tool.prototype.down = function (pt) {};
 	Tool.prototype.up = function (pt) {};
@@ -78,16 +77,16 @@
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas;
 	    	if (pt.x < stroke.tl.x) {
-	    		stroke.tl.x = clamp(pt.x - 50, 0, canvas.width);
+	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
 	    	}
 	    	if (pt.x > stroke.br.x) {
-	    		stroke.br.x = clamp(pt.x + 50, 0, canvas.width);
+	    		stroke.br.x = TeledrawCanvas.util.clamp(pt.x + 50, 0, canvas.width);
 	    	}
 	    	if (pt.y < stroke.tl.y) {
-	    		stroke.tl.y = clamp(pt.y - 50, 0, canvas.height);
+	    		stroke.tl.y = TeledrawCanvas.util.clamp(pt.y - 50, 0, canvas.height);
 	    	}
 	    	if (pt.y > stroke.br.y) {
-	    		stroke.br.y = clamp(pt.y + 50, 0, canvas.height);
+	    		stroke.br.y = TeledrawCanvas.util.clamp(pt.y + 50, 0, canvas.height);
 	    	}
 	    };
 	    

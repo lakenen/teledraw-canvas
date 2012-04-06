@@ -26,12 +26,14 @@
 **/
 
 TeledrawCanvas = (function () {
+	// local reference to Math functions
 	var floor = Math.floor,
-		pow = Math.pow,
-		clamp = function (c, a, b) {
-			return (c < a ? a : c > b ? b : c);
-		};
+		pow = Math.pow;
+		
+	var _canvases = [];
+	var _id = 0;
 	
+	// global default tool settings
 	var defaults = {
 		tool: 'pencil',
 		alpha: 255,
@@ -39,21 +41,23 @@ TeledrawCanvas = (function () {
 		strokeSize: 1000,
 		strokeSoftness: 0
 	};
+	
+	// global default state
 	var defaultState = {
-		color: [0, 0, 0],
-		globalAlpha: 255,
-		strokeSize: 1000,
-		strokeSoftness: 5,
 		last: null,
 		currentTool: null,
 		previousTool: null,
 		tool: null,
-		mouse_down: false,
-		mouse_over: false,
+		mouseDown: false,
+		mouseOver: false,
 		width: null,
 		height: null,
 		shadowOffset: 2000,
-		max_history: 10
+		maxHistory: 10,
+		minStrokeSize: 500,
+		maxStrokeSize: 10000,
+		minStrokeSoftness: 0,
+		maxStrokeSoftness: 100
 	};
 	
 	var TeledrawCanvas = function (elt) {
@@ -68,7 +72,6 @@ TeledrawCanvas = (function () {
 		var canvas = this;
 		this.drawHandlers  = [];
 		this.history = new TeledrawCanvas.History(this);
-		//this.history.checkpoint();
 		
 		state.width = parseInt(element.attr('width'));
 		state.height = parseInt(element.attr('height'));
@@ -80,15 +83,15 @@ TeledrawCanvas = (function () {
 			.addClass('noselect')
 			.bind('mouseenter', function (evt) {
 	            var pt = getCoord(evt);
-	            state.tool.enter(state.mouse_down, pt);
+	            state.tool.enter(state.mouseDown, pt);
 	            state.last = pt;
-	            state.mouse_over = true;
+	            state.mouseOver = true;
 	        })      
 	        .bind('mousedown touchstart', mouseDown)
 	        .bind('mouseleave', function (evt) {
 	            var pt = getCoord(evt);
-	            state.tool.leave(state.mouse_down, pt);
-	            state.mouse_over = false;
+	            state.tool.leave(state.mouseDown, pt);
+	            state.mouseOver = false;
 	        });
         
         
@@ -102,9 +105,9 @@ TeledrawCanvas = (function () {
 	    	}
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
 	    	target = $(e.target).parents().andSelf();
-	        if (target.is(element) || state.mouse_down) {
+	        if (target.is(element) || state.mouseDown) {
 	            var next = getCoord(e);
-	            state.tool.move(state.mouse_down, state.last, next);
+	            state.tool.move(state.mouseDown, state.last, next);
 	            state.last = next;
 	            lastMoveEvent = e.type;
             	e.preventDefault();
@@ -116,7 +119,7 @@ TeledrawCanvas = (function () {
 	    		return true;
 	    	}
             var pt = state.last = getCoord(e);
-            state.mouse_down = true;
+            state.mouseDown = true;
             document.onselectstart = function() { return false; };
             $(window)
                 .one('mouseup touchend', mouseUp);
@@ -128,7 +131,7 @@ TeledrawCanvas = (function () {
 	    	if (e.type == 'touchend' && e.originalEvent.touches.length > 1) {
 	    		return true;
 	    	}
-        	state.mouse_down = false;
+        	state.mouseDown = false;
             document.onselectstart = function() { return true; };
             state.tool.up(state.last);
         	e.preventDefault();
@@ -143,199 +146,24 @@ TeledrawCanvas = (function () {
 		
 		this.defaults();
 		this.history.checkpoint();
+		_canvases[_id++] = this;
 	};
 	
+	TeledrawCanvas.canvases = _canvases;
 	
-	TeledrawCanvas.prototype.canvas = function () {
-	    return this._canvas;
-	};
-
-	TeledrawCanvas.prototype.cursor = function (c) {
-	    if (!c) {
-	        c = "default";
-	    }
-	    this.container.css('cursor', c);
-	};
-
-	TeledrawCanvas.prototype.ctx = function () {
-	    return this._ctx || (this._ctx = this.canvas().getContext('2d'));
-	};
 	
-	TeledrawCanvas.prototype.clear = function (nocheckpoint) {
-	    var ctx = this.ctx();
-		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		if (nocheckpoint !== true) {
-			this.history.checkpoint();
-		}
-	};
+	// "Private" functions
 	
-	TeledrawCanvas.prototype.defaults = function () {
-		this.setTool('pencil');
-		this.setAlpha(defaults.alpha);
-		this.setColor(defaults.color);
-		this.setStrokeSize(defaults.strokeSize);
-		this.setStrokeSoftness(defaults.strokeSoftness);
-	};
-	
-	TeledrawCanvas.prototype.toDataURL = function (w, h) {
-		if (w && h) {
-			w = parseInt(w);
-			h = parseInt(h);
-			var tmpcanvas = $('<canvas>').attr({
-				width: w,
-				height: h
-			}).get(0);
-			tmpcanvas.getContext('2d').drawImage(this.canvas(), 0, 0, w, h);
-			return tmpcanvas.toDataURL();
-		}
-		return this.canvas().toDataURL();
-	};
-	
-	TeledrawCanvas.prototype.getRevision = function (rev) {
-		return this.history.getRevision(rev);
-	};
-	TeledrawCanvas.prototype.setRevision = function (data) {
-		this.fromDataURL(data.data, function () {
-			this.history.setRevision(data.rev);
-		});
-	};
-
-	TeledrawCanvas.prototype.getTempCanvas = function (w, h) {
-		var tmp = $('<canvas>').get(0);
-		tmp.width = w || this._canvas.width;
-		tmp.height = h || this._canvas.height;
-		return tmp;
-	};
-
-	TeledrawCanvas.prototype.fromDataURL = function (url, cb) {
-		var self = this,
-			img = new Image();
-		img.onload = function () {
-			self.clear(true);
-			self.ctx().drawImage(img, 0, 0);
-			//self.history.checkpoint();
-			if (typeof cb == 'function') {
-				cb.call(self);
-			}
-		};
-		img.src = url;
-	};
-
-	TeledrawCanvas.prototype.getImageData = function () {
-		var ctx = this.ctx();
-	    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-	};
-
-	TeledrawCanvas.prototype.putImageData = function (data) {
-		this.ctx().putImageData(data, 0, 0);
-	};
-	
-	TeledrawCanvas.prototype.getColor = function () {
-	    return this.state.color.slice();
-	};
-	
-	TeledrawCanvas.prototype.setColor = function (rgba) {
+	TeledrawCanvas.prototype._setRGBAArrayColor = function (rgba) {
 		var state = this.state;
 		if (rgba.length === 4) {
 			state.globalAlpha = rgba.pop();
 		}
+		for (var i = rgba.length; i < 3; ++i) {
+			rgba.push(0);
+		}
 		state.color = rgba;
 		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.setHexColor =  function (hex, track) {
-		this.setColor(TeledrawCanvas.hex2rgb(hex));
-	};
-	
-	TeledrawCanvas.prototype.getHexColor = function () {
-		return TeledrawCanvas.rgb2hex(this.state.color);
-	};
-
-	TeledrawCanvas.prototype.setAlpha = function (a) {
-		this.state.globalAlpha = clamp(a, 0, 255);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.getAlpha = function () {
-		return this.state.globalAlpha;
-	};
-	
-	TeledrawCanvas.prototype.setStrokeSize = function (s) {
-		this.state.strokeSize = clamp(s, 500, 10000);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.setStrokeSoftness = function (s) {
-		this.state.strokeSoftness = clamp(s, 0, 60);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.setTool = function (name) {
-		this.state.previousTool = this.state.currentTool;
-		this.state.currentTool = name;
-		if (!TeledrawCanvas.tools[name]) {
-			throw new Error('Tool "'+name+'" not defined.');
-		}
-		this.state.tool = new TeledrawCanvas.tools[name](this);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.undo = function () {
-		//if (this.history.hasRevision(this.history.rev-1)) {
-			this.history.undo();
-		//}
-	};
-	
-	TeledrawCanvas.prototype.redo = function () {
-		//if (this.history.hasRevision(this.history.rev+1)) {
-			this.history.redo();
-		//}
-	};
-	
-	TeledrawCanvas.prototype.action = function (action) {
-		switch (action.type) {
-			case 'state':
-				this._updateState(action.state);
-				break;
-			case 'clear':
-				this.clear();
-				break;
-			case 'undo':
-				if (!this.history.hasRevision(action.rev)) {
-				} else {
-					this.history.undo();
-				}
-				break;
-			case 'redo':
-				if (!this.history.hasRevision(action.rev)) {
-				} else {
-					this.history.redo();
-				}
-				break;
-			case 'down':
-            	this.state.tool.down(arr2coord(action.pt));
-				break;
-			case 'move':
-				if (action.pts.length === 2) {
-	        		this.state.tool.move(true, arr2coord(action.pts[0]), arr2coord(action.pts[1]));
-	        	} else {
-	        		for (var i = 1, l = action.pts.length; i < l; ++i) {
-	        			this.state.tool.move(true, arr2coord(action.pts[i-1]), arr2coord(action.pts[i]));
-					}
-	        	}
-				break;
-			case 'up':
-            	this.state.tool.up(arr2coord(action.pt));
-				break;
-		}
-	};
-	
-	TeledrawCanvas.prototype.resize = function (w, h) {
-		var tmpcanvas = $(this._canvas).clone().get(0);
-		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
-		this._canvas.width = w;
-		this._canvas.height = h;
-		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
 	};
 	
 	TeledrawCanvas.prototype._updateState = function (state) {
@@ -351,94 +179,173 @@ TeledrawCanvas = (function () {
 	};
 	
 	
-	/***** Class methods *****/
+	// API
 	
-	TeledrawCanvas.rgba2rgb = function(rgba) {
-		if (rgba.length === 3 || rgba[3] === 255) {
-			return rgba;
-		}
-		var r = rgba[0],
-			g = rgba[1],
-			b = rgba[2],
-			a = rgba[3]/255,
-			out = [];
-		out[0] = (a * r) + (255 - a*255);
-		out[1] = (a * g) + (255 - a*255);
-		out[2] = (a * b) + (255 - a*255);
-		return out;
+	// returns the HTML Canvas element associated with this tdcanvas
+	TeledrawCanvas.prototype.canvas = function () {
+	    return this._canvas;
+	};
+
+	// returns a 2d rendering context for the canvas element
+	TeledrawCanvas.prototype.ctx = function () {
+	    return this._ctx || (this._ctx = this.canvas().getContext('2d'));
 	};
 	
-	TeledrawCanvas.rgb2hex = function (rgb) {
-		rgb = TeledrawCanvas.rgba2rgb(rgb);
-		function toHex(n) {
-			n = parseInt(n, 10);
-			if (isNaN(n)) {
-				return "00";
-			}
-			n = Math.max(0, Math.min(n, 255));
-			return "0123456789ABCDEF".charAt((n-n%16)/16) + "0123456789ABCDEF".charAt(n%16);
-		}
-		return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
-	};
-	
-	TeledrawCanvas.hex2rgb = function (hex) {
-		var r = 255, g = 255, b = 255;
-		hex = hex.replace(' ','');
-	    hex = (hex.charAt(0) == "#" ? hex.substr(1) : hex);
-	    if (hex.length == 6) {
-	    	r = parseInt(hex.substring(0, 2), 16);
-	    	g = parseInt(hex.substring(2, 4), 16);
-	    	b = parseInt(hex.substring(4, 6), 16);
-	    } else if (hex.length == 3) {
-	    	r = parseInt(hex.substring(0, 1) + hex.substring(0, 1), 16);
-	    	g = parseInt(hex.substring(1, 2) + hex.substring(1, 2), 16);
-	    	b = parseInt(hex.substring(2, 3) + hex.substring(2, 3), 16);
+	// sets the cursor css to be used when the mouse is over the canvas element
+	TeledrawCanvas.prototype.cursor = function (c) {
+	    if (!c) {
+	        c = "default";
 	    }
-	    return [r, g, b];
+	    this.container.css('cursor', c);
+	    return this;
 	};
 	
-	TeledrawCanvas.rgb2hsl = function (rgb) {
-		var r = rgb[0]/255,
-			g = rgb[1]/255,
-			b = rgb[2]/255,
-			max = Math.max(r, g, b),
-			min = Math.min(r, g, b),
-			d, h, s, l = (max + min) / 2;
-		if (max == min) {
-			h = s = 0;
-		} else {
-			d = max - min;
-			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-			switch (max) {
-				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-				case g: h = (b - r) / d + 2; break;
-				case b: h = (r - g) / d + 4; break;
-			}
-			h /= 6;
+	// clears the canvas and (unless noCheckpoint===true) pushes to the undoable history
+	TeledrawCanvas.prototype.clear = function (noCheckpoint) {
+	    var ctx = this.ctx();
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		if (noCheckpoint !== true) {
+			this.history.checkpoint();
 		}
-		return [h, s, l];
+		return this;
 	};
 	
-	TeledrawCanvas.hex2hsl = function (hex) {
-		return TeledrawCanvas.rgb2hsl(TeledrawCanvas.hex2rgb(hex));
+	// resets the default tool and properties
+	TeledrawCanvas.prototype.defaults = function () {
+		this.setTool('pencil');
+		this.setAlpha(defaults.alpha);
+		this.setColor(defaults.color);
+		this.setStrokeSize(defaults.strokeSize);
+		this.setStrokeSoftness(defaults.strokeSoftness);
+		return this;
 	};
 	
-	TeledrawCanvas.cssColor = function (rgba) {
-	    if (rgba.length == 3) {
-	        return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
-	    }
-	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (floor(rgba[3]) / 0xFF) + ")";
+	// returns a data url (image/png) of the canvas, optionally scaled to w x h pixels
+	TeledrawCanvas.prototype.toDataURL = function (w, h) {
+		if (w && h) {
+			w = parseInt(w);
+			h = parseInt(h);
+			var tmpcanvas = $('<canvas>').attr({
+				width: w,
+				height: h
+			}).get(0);
+			tmpcanvas.getContext('2d').drawImage(this.canvas(), 0, 0, w, h);
+			return tmpcanvas.toDataURL();
+		}
+		return this.canvas().toDataURL();
 	};
 	
-	function coord2arr(coord) {
-		return [coord.x, coord.y];
-	}
+	// returns a new (blank) canvas element the same size as this tdcanvas element
+	TeledrawCanvas.prototype.getTempCanvas = function (w, h) {
+		var tmp = $('<canvas>').get(0);
+		tmp.width = w || this._canvas.width;
+		tmp.height = h || this._canvas.height;
+		return tmp;
+	};
+
+	// draws an image data url to the canvas and when it's finished, calls the given callback function
+	TeledrawCanvas.prototype.fromDataURL = function (url, cb) {
+		var self = this,
+			img = new Image();
+		img.onload = function () {
+			self.clear(true);
+			self.ctx().drawImage(img, 0, 0);
+			//self.history.checkpoint();
+			if (typeof cb == 'function') {
+				cb.call(self);
+			}
+		};
+		img.src = url;
+		return this;
+	};
+
+	// returns the ImageData of the whole canvas element
+	TeledrawCanvas.prototype.getImageData = function () {
+		var ctx = this.ctx();
+	    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+	};
+
+	// sets the ImageData of the canvas
+	TeledrawCanvas.prototype.putImageData = function (data) {
+		this.ctx().putImageData(data, 0, 0);
+		return this;
+	};
 	
-	function arr2coord(arr) {
-		return {x: arr[0], y: arr[1]};
-	}
+	// returns the current color in the form [r, g, b, a] (where each can be [0,255])
+	TeledrawCanvas.prototype.getColor = function () {
+	    return this.state.color.slice();
+	};
 	
-	TeledrawCanvas.clamp = clamp;
+	// sets the current color, either as an array (see getColor) or any acceptable css color string
+	TeledrawCanvas.prototype.setColor = function (color) {
+		if (!$.isArray(color)) {
+			color = TeledrawCanvas.util.parseColorString(color);
+		}
+		this._setRGBAArrayColor(color);
+		return this;
+	};
+	
+	// sets the current alpha to a, where a is a number in [0, 255]
+	TeledrawCanvas.prototype.setAlpha = function (a) {
+		this.state.globalAlpha = TeledrawCanvas.util.clamp(a, 0, 255);
+		this._updateTool();
+		return this;
+	};
+	
+	// returns the current alpha
+	TeledrawCanvas.prototype.getAlpha = function () {
+		return this.state.globalAlpha;
+	};
+	
+	// sets the current stroke size to s, where a is a number in [minStrokeSize, maxStrokeSize]
+	// lineWidth = 1 + floor(pow(strokeSize / 1000.0, 2));
+	TeledrawCanvas.prototype.setStrokeSize = function (s) {
+		this.state.strokeSize = TeledrawCanvas.util.clamp(s, this.state.minStrokeSize, this.state.maxStrokeSize);
+		this._updateTool();
+		return this;
+	};
+	
+	// sets the current stroke size to s, where a is a number in [minStrokeSoftness, maxStrokeSoftness]
+	TeledrawCanvas.prototype.setStrokeSoftness = function (s) {
+		this.state.strokeSoftness = TeledrawCanvas.util.clamp(s, this.state.minStrokeSoftness, this.state.maxStrokeSoftness);
+		this._updateTool();
+		return this;
+	};
+	
+	// set the current tool, given the string name of the tool (e.g. 'pencil')
+	TeledrawCanvas.prototype.setTool = function (name) {
+		this.state.previousTool = this.state.currentTool;
+		this.state.currentTool = name;
+		if (!TeledrawCanvas.tools[name]) {
+			throw new Error('Tool "'+name+'" not defined.');
+		}
+		this.state.tool = new TeledrawCanvas.tools[name](this);
+		this._updateTool();
+		return this;
+	};
+	
+	// undo to the last history checkpoint (if available)
+	TeledrawCanvas.prototype.undo = function () {
+		this.history.undo();
+		return this;
+	};
+	
+	// redo to the next history checkpoint (if available)
+	TeledrawCanvas.prototype.redo = function () {
+		this.history.redo();
+		return this;
+	};
+	
+	// resize the canvas to the given width and height, with the current image duplicated and stretched to the new size
+	TeledrawCanvas.prototype.resize = function (w, h) {
+		var tmpcanvas = $(this._canvas).clone().get(0);
+		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
+		this._canvas.width = w;
+		this._canvas.height = h;
+		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
+		return this;
+	};
+	
 	return TeledrawCanvas;
 })();
 /**
@@ -459,7 +366,7 @@ TeledrawCanvas = (function () {
 	};
 
 	History.prototype.checkpoint = function () {
-	    if (this.past.length > this.canvas.state.max_history) {
+	    if (this.past.length > this.canvas.state.maxHistory) {
 			this.past.shift();
 	    }
 	    
@@ -472,51 +379,17 @@ TeledrawCanvas = (function () {
 	};
 
 	History.prototype.undo = function () {
-	console.log(this.future.length, this.past.length, this.current);
 	    if (this._move(this.past, this.future)) {
 	    	this.rev--;
 	    }
 	};
 
 	History.prototype.redo = function () {
-	console.log(this.future.length, this.past.length, this.current);
 	    if (this._move(this.future, this.past)) {
 	    	this.rev++;
 	    }
 	};
-	/*
-	History.prototype.hasRevision = function (rev) {
-		if (rev === this.rev) {
-			return true;
-		}
-		if (rev > this.rev + this.future.length || rev < this.rev - this.past.length) {
-			return false;
-		}
-		return true;
-	};
 	
-	History.prototype.setRevision = function (rev) {
-		this.rev = rev;
-		this.past = [];
-		this.current = new TeledrawCanvas.Snapshot(this.canvas);
-		this.future = [];
-	};
-	
-	History.prototype.getRevision = function (rev) {
-		var snapshot;
-		if (!this.hasRevision(rev)) {
-			return false;
-		}
-		if (rev < this.rev) {
-			snapshot = this.past[this.past.length - (this.rev - rev)];
-		} else if (rev > this.rev) {
-			snapshot = this.future[rev - this.rev];
-		} else {
-			snapshot = this.current;
-		}
-		return snapshot && snapshot.toDataURL();
-	};
-	*/
 	History.prototype._move = function(stack_from, stack_to) {
 	    if (!stack_from.length) return false;
 	    if (!this.current) return false;
@@ -603,7 +476,6 @@ TeledrawCanvas = (function () {
  */
 (function (TeledrawCanvas) {
 	var Tool = function () {};
-	var clamp = TeledrawCanvas.clamp;
 
 	Tool.prototype.down = function (pt) {};
 	Tool.prototype.up = function (pt) {};
@@ -678,16 +550,16 @@ TeledrawCanvas = (function () {
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas;
 	    	if (pt.x < stroke.tl.x) {
-	    		stroke.tl.x = clamp(pt.x - 50, 0, canvas.width);
+	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
 	    	}
 	    	if (pt.x > stroke.br.x) {
-	    		stroke.br.x = clamp(pt.x + 50, 0, canvas.width);
+	    		stroke.br.x = TeledrawCanvas.util.clamp(pt.x + 50, 0, canvas.width);
 	    	}
 	    	if (pt.y < stroke.tl.y) {
-	    		stroke.tl.y = clamp(pt.y - 50, 0, canvas.height);
+	    		stroke.tl.y = TeledrawCanvas.util.clamp(pt.y - 50, 0, canvas.height);
 	    	}
 	    	if (pt.y > stroke.br.y) {
-	    		stroke.br.y = clamp(pt.y + 50, 0, canvas.height);
+	    		stroke.br.y = TeledrawCanvas.util.clamp(pt.y + 50, 0, canvas.height);
 	    	}
 	    };
 	    
@@ -699,6 +571,420 @@ TeledrawCanvas = (function () {
 	
 	TeledrawCanvas.Tool = Tool;
 	TeledrawCanvas.tools = {};
+})(TeledrawCanvas);
+
+/**
+ * TeledrawCanvas.util
+ */
+(function (TeledrawCanvas) {
+	var Util = function () { return Util; };
+	var floor = Math.floor,
+		min = Math.min,
+		max = Math.max;
+	
+	Util.cssColor = function (rgba) {
+	    if (rgba.length == 3) {
+	        return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
+	    }
+	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (floor(rgba[3]) / 0xFF) + ")";
+	};
+	
+	Util.clamp = function (c, a, b) {
+		return (c < a ? a : c > b ? b : c);
+	};
+	
+	Util.rgba2rgb = function(rgba) {
+		if (rgba.length === 3 || rgba[3] === 255) {
+			return rgba;
+		}
+		var r = rgba[0],
+			g = rgba[1],
+			b = rgba[2],
+			a = rgba[3]/255,
+			out = [];
+		out[0] = (a * r) + (255 - a*255);
+		out[1] = (a * g) + (255 - a*255);
+		out[2] = (a * b) + (255 - a*255);
+		return out;
+	};
+	
+	Util.rgb2hex = function (rgb) {
+		rgb = Util.rgba2rgb(rgb);
+		return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+	};
+	
+	Util.hex2rgb = function (hex) {
+		return Util.parseColorString(hex);
+	};
+	
+	Util.rgb2hsl = function (rgb) {
+		var r = rgb[0]/255,
+			g = rgb[1]/255,
+			b = rgb[2]/255,
+			max = Math.max(r, g, b),
+			min = Math.min(r, g, b),
+			d, h, s, l = (max + min) / 2;
+		if (max == min) {
+			h = s = 0;
+		} else {
+			d = max - min;
+			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+			switch (max) {
+				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+				case g: h = (b - r) / d + 2; break;
+				case b: h = (r - g) / d + 4; break;
+			}
+			h /= 6;
+		}
+		return [h, s, l];
+	};
+	
+	
+	Util.hex2hsl = function (hex) {
+		return Util.rgb2hsl(Util.hex2rgb(hex));
+	};
+	
+	Util.rgb2hsl = function (rgb) {
+		var r = rgb[0]/255,
+			g = rgb[1]/255,
+			b = rgb[2]/255,
+			max = Math.max(r, g, b),
+			min = Math.min(r, g, b),
+			d, h, s, l = (max + min) / 2;
+		if (max == min) {
+			h = s = 0;
+		} else {
+			d = max - min;
+			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+			switch (max) {
+				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+				case g: h = (b - r) / d + 2; break;
+				case b: h = (r - g) / d + 4; break;
+			}
+			h /= 6;
+		}
+		return [h, s, l];
+	};
+	
+	Util.hsl2rgb = function (hsl) {
+		var m1, m2, hue;
+		var r, g, b;
+		var h = hsl[0],
+			s = hsl[1]/100,
+			l = hsl[2]/100;
+		if (s == 0)
+			r = g = b = (l * 255);
+		else {
+			if (l <= 0.5)
+				m2 = l * (s + 1);
+			else
+				m2 = l + s - l * s;
+			m1 = l * 2 - m2;
+			hue = h / 360;
+			r = hue2rgb(m1, m2, hue + 1/3);
+			g = hue2rgb(m1, m2, hue);
+			b = hue2rgb(m1, m2, hue - 1/3);
+		}
+		return [r, g, b];
+	};
+	
+	function toHex(n) {
+		n = parseInt(n, 10) || 0;
+		n = Util.clamp(n, 0, 255).toString(16);
+		if (n.length === 1) {
+			n = '0'+n;
+		}
+		return n;
+	}
+	
+	
+	function hue2rgb(m1, m2, hue) {
+		var v;
+		if (hue < 0)
+			hue += 1;
+		else if (hue > 1)
+			hue -= 1;
+	
+		if (6 * hue < 1)
+			v = m1 + (m2 - m1) * hue * 6;
+		else if (2 * hue < 1)
+			v = m2;
+		else if (3 * hue < 2)
+			v = m1 + (m2 - m1) * (2/3 - hue) * 6;
+		else
+			v = m1;
+	
+		return 255 * v;
+	}
+	
+	/**
+	* A class to parse color values
+	* @author Stoyan Stefanov <sstoo@gmail.com>
+	* @link   http://www.phpied.com/rgb-color-parser-in-javascript/
+	* @license Use it if you like it
+	*/
+	Util.parseColorString = function(color_string)
+	{
+		var ok = false;
+	 	var r, g, b, a;
+	 	
+		// strip any leading #
+		if (color_string.charAt(0) == '#') { // remove # if any
+			color_string = color_string.substr(1,6);
+		}
+	 
+		color_string = color_string.replace(/ /g,'');
+		color_string = color_string.toLowerCase();
+	 
+		// before getting into regexps, try simple matches
+		// and overwrite the input
+		var simple_colors = {
+			aliceblue: 'f0f8ff',
+			antiquewhite: 'faebd7',
+			aqua: '00ffff',
+			aquamarine: '7fffd4',
+			azure: 'f0ffff',
+			beige: 'f5f5dc',
+			bisque: 'ffe4c4',
+			black: '000000',
+			blanchedalmond: 'ffebcd',
+			blue: '0000ff',
+			blueviolet: '8a2be2',
+			brown: 'a52a2a',
+			burlywood: 'deb887',
+			cadetblue: '5f9ea0',
+			chartreuse: '7fff00',
+			chocolate: 'd2691e',
+			coral: 'ff7f50',
+			cornflowerblue: '6495ed',
+			cornsilk: 'fff8dc',
+			crimson: 'dc143c',
+			cyan: '00ffff',
+			darkblue: '00008b',
+			darkcyan: '008b8b',
+			darkgoldenrod: 'b8860b',
+			darkgray: 'a9a9a9',
+			darkgreen: '006400',
+			darkkhaki: 'bdb76b',
+			darkmagenta: '8b008b',
+			darkolivegreen: '556b2f',
+			darkorange: 'ff8c00',
+			darkorchid: '9932cc',
+			darkred: '8b0000',
+			darksalmon: 'e9967a',
+			darkseagreen: '8fbc8f',
+			darkslateblue: '483d8b',
+			darkslategray: '2f4f4f',
+			darkturquoise: '00ced1',
+			darkviolet: '9400d3',
+			deeppink: 'ff1493',
+			deepskyblue: '00bfff',
+			dimgray: '696969',
+			dodgerblue: '1e90ff',
+			feldspar: 'd19275',
+			firebrick: 'b22222',
+			floralwhite: 'fffaf0',
+			forestgreen: '228b22',
+			fuchsia: 'ff00ff',
+			gainsboro: 'dcdcdc',
+			ghostwhite: 'f8f8ff',
+			gold: 'ffd700',
+			goldenrod: 'daa520',
+			gray: '808080',
+			green: '008000',
+			greenyellow: 'adff2f',
+			honeydew: 'f0fff0',
+			hotpink: 'ff69b4',
+			indianred : 'cd5c5c',
+			indigo : '4b0082',
+			ivory: 'fffff0',
+			khaki: 'f0e68c',
+			lavender: 'e6e6fa',
+			lavenderblush: 'fff0f5',
+			lawngreen: '7cfc00',
+			lemonchiffon: 'fffacd',
+			lightblue: 'add8e6',
+			lightcoral: 'f08080',
+			lightcyan: 'e0ffff',
+			lightgoldenrodyellow: 'fafad2',
+			lightgrey: 'd3d3d3',
+			lightgreen: '90ee90',
+			lightpink: 'ffb6c1',
+			lightsalmon: 'ffa07a',
+			lightseagreen: '20b2aa',
+			lightskyblue: '87cefa',
+			lightslateblue: '8470ff',
+			lightslategray: '778899',
+			lightsteelblue: 'b0c4de',
+			lightyellow: 'ffffe0',
+			lime: '00ff00',
+			limegreen: '32cd32',
+			linen: 'faf0e6',
+			magenta: 'ff00ff',
+			maroon: '800000',
+			mediumaquamarine: '66cdaa',
+			mediumblue: '0000cd',
+			mediumorchid: 'ba55d3',
+			mediumpurple: '9370d8',
+			mediumseagreen: '3cb371',
+			mediumslateblue: '7b68ee',
+			mediumspringgreen: '00fa9a',
+			mediumturquoise: '48d1cc',
+			mediumvioletred: 'c71585',
+			midnightblue: '191970',
+			mintcream: 'f5fffa',
+			mistyrose: 'ffe4e1',
+			moccasin: 'ffe4b5',
+			navajowhite: 'ffdead',
+			navy: '000080',
+			oldlace: 'fdf5e6',
+			olive: '808000',
+			olivedrab: '6b8e23',
+			orange: 'ffa500',
+			orangered: 'ff4500',
+			orchid: 'da70d6',
+			palegoldenrod: 'eee8aa',
+			palegreen: '98fb98',
+			paleturquoise: 'afeeee',
+			palevioletred: 'd87093',
+			papayawhip: 'ffefd5',
+			peachpuff: 'ffdab9',
+			peru: 'cd853f',
+			pink: 'ffc0cb',
+			plum: 'dda0dd',
+			powderblue: 'b0e0e6',
+			purple: '800080',
+			red: 'ff0000',
+			rosybrown: 'bc8f8f',
+			royalblue: '4169e1',
+			saddlebrown: '8b4513',
+			salmon: 'fa8072',
+			sandybrown: 'f4a460',
+			seagreen: '2e8b57',
+			seashell: 'fff5ee',
+			sienna: 'a0522d',
+			silver: 'c0c0c0',
+			skyblue: '87ceeb',
+			slateblue: '6a5acd',
+			slategray: '708090',
+			snow: 'fffafa',
+			springgreen: '00ff7f',
+			steelblue: '4682b4',
+			tan: 'd2b48c',
+			teal: '008080',
+			thistle: 'd8bfd8',
+			tomato: 'ff6347',
+			turquoise: '40e0d0',
+			violet: 'ee82ee',
+			violetred: 'd02090',
+			wheat: 'f5deb3',
+			white: 'ffffff',
+			whitesmoke: 'f5f5f5',
+			yellow: 'ffff00',
+			yellowgreen: '9acd32'
+		};
+		for (var key in simple_colors) {
+			if (color_string == key) {
+				color_string = simple_colors[key];
+			}
+		}
+		// emd of simple type-in colors
+	 
+		// array of color definition objects
+		var color_defs = [
+		{
+			re: /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/,
+			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
+			process: function (bits){
+				return [
+				parseInt(bits[1]),
+				parseInt(bits[2]),
+				parseInt(bits[3]),
+				255
+				];
+			}
+		},
+		{
+			re: /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d*\.*\d{1,3})\)$/,
+			//example: ['rgba(123, 234, 45, 0.5)', 'rgba(255,234,245, .1)'],
+			process: function (bits){
+				return [
+				parseInt(bits[1]),
+				parseInt(bits[2]),
+				parseInt(bits[3]),
+				parseFloat(bits[4]) * 0xFF
+				];
+			}
+		},
+		{
+			re: /^hsl\((\d{1,3}),\s*(\d{1,3})%,\s*(\d{1,3})%\)$/,
+			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
+			process: function (bits){
+				var rgba = Util.hsl2rgb(bits.slice(1, 4));
+				rgba.push(255);
+				return rgba;
+			}
+		},
+		{
+			re: /^hsla\((\d{1,3}),\s*(\d{1,3})%,\s*(\d{1,3})%,\s*(\d*\.*\d{1,3})\)$/,
+			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
+			process: function (bits){
+				var rgba = Util.hsl2rgb(bits.slice(1, 4));
+				rgba.push(parseFloat(bits[4]) * 0xFF);
+				return rgba;
+			}
+		},
+		{
+			re: /^(\w{2})(\w{2})(\w{2})$/,
+			//example: ['#00ff00', '336699'],
+			process: function (bits){
+				return [
+				parseInt(bits[1], 16),
+				parseInt(bits[2], 16),
+				parseInt(bits[3], 16),
+				255
+				];
+			}
+		},
+		{
+			re: /^(\w{1})(\w{1})(\w{1})$/,
+			//example: ['#fb0', 'f0f'],
+			process: function (bits){
+				return [
+				parseInt(bits[1] + bits[1], 16),
+				parseInt(bits[2] + bits[2], 16),
+				parseInt(bits[3] + bits[3], 16),
+				255
+				];
+			}
+		}
+		];
+	 
+		// search through the definitions to find a match
+		for (var i = 0; i < color_defs.length; i++) {
+			var re = color_defs[i].re;
+			var processor = color_defs[i].process;
+			var bits = re.exec(color_string);
+			if (bits) {
+				channels = processor(bits);
+				r = channels[0];
+				g = channels[1];
+				b = channels[2];
+				a = channels[3];
+				ok = true;
+			}
+	 
+		}
+	 
+		// validate/cleanup values
+		r = (r < 0 || isNaN(r)) ? 0 : ((r > 255) ? 255 : r);
+		g = (g < 0 || isNaN(g)) ? 0 : ((g > 255) ? 255 : g);
+		b = (b < 0 || isNaN(b)) ? 0 : ((b > 255) ? 255 : b);
+		a = (a < 0 || isNaN(a)) ? 0 : ((a > 255) ? 255 : a);
+		return ok ? [r, g, b, a] : [0, 0, 0, 255];
+	}
+	
+	TeledrawCanvas.util = Util;
 })(TeledrawCanvas);
 
 /**
@@ -725,6 +1011,7 @@ TeledrawCanvas = (function () {
 	
 	Pencil.stroke.prototype.lineWidth = 1;
 	Pencil.stroke.prototype.lineCap = 'round';
+	Pencil.stroke.prototype.smoothing = true;
 
 	Pencil.stroke.prototype.draw = function () {
 		var state = this.canvas.state,
@@ -736,8 +1023,9 @@ TeledrawCanvas = (function () {
 			shadowOffset = state.shadowOffset,
 			shadowBlur = state.shadowBlur,
 			lineWidth = state.lineWidth,
-			color = TeledrawCanvas.cssColor(state.color);
+			color = TeledrawCanvas.util.cssColor(state.color);
 		
+		ctx.globalAlpha = state.globalAlpha;
 		ctx.fillStyle = ctx.strokeStyle = color
 	    ctx.miterLimit = 100000;
 	    ctx.save();
@@ -775,16 +1063,18 @@ TeledrawCanvas = (function () {
 	        		// hack to avoid weird linejoins cutting the line
 	        		curr.x += 0.1; curr.y += 0.1;
 	        	}
-	            //if (!prevprev) {
-	            //	ctx.lineTo(curr.x, curr.y);
-	            //} else {
+	            if (this.smoothing) {
 	           		var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
 	         		ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
-	            //}
+	            } else {
+	            	ctx.lineTo(curr.x, curr.y);
+	            }
 	            prevprev = prev;
 	            prev = points[i];
 	        }
-	        ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+	        if (this.smoothing) {
+	       		ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+	        }
 	        ctx.stroke();
 	    }
 	    ctx.restore();

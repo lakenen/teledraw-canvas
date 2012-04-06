@@ -26,15 +26,14 @@
 **/
 
 TeledrawCanvas = (function () {
+	// local reference to Math functions
 	var floor = Math.floor,
-		pow = Math.pow,
-		clamp = function (c, a, b) {
-			return (c < a ? a : c > b ? b : c);
-		};
+		pow = Math.pow;
 		
 	var _canvases = [];
 	var _id = 0;
 	
+	// global default tool settings
 	var defaults = {
 		tool: 'pencil',
 		alpha: 255,
@@ -42,21 +41,23 @@ TeledrawCanvas = (function () {
 		strokeSize: 1000,
 		strokeSoftness: 0
 	};
+	
+	// global default state
 	var defaultState = {
-		color: [0, 0, 0],
-		globalAlpha: 255,
-		strokeSize: 1000,
-		strokeSoftness: 5,
 		last: null,
 		currentTool: null,
 		previousTool: null,
 		tool: null,
-		mouse_down: false,
-		mouse_over: false,
+		mouseDown: false,
+		mouseOver: false,
 		width: null,
 		height: null,
 		shadowOffset: 2000,
-		max_history: 10
+		maxHistory: 10,
+		minStrokeSize: 500,
+		maxStrokeSize: 10000,
+		minStrokeSoftness: 0,
+		maxStrokeSoftness: 100
 	};
 	
 	var TeledrawCanvas = function (elt) {
@@ -71,7 +72,6 @@ TeledrawCanvas = (function () {
 		var canvas = this;
 		this.drawHandlers  = [];
 		this.history = new TeledrawCanvas.History(this);
-		//this.history.checkpoint();
 		
 		state.width = parseInt(element.attr('width'));
 		state.height = parseInt(element.attr('height'));
@@ -83,15 +83,15 @@ TeledrawCanvas = (function () {
 			.addClass('noselect')
 			.bind('mouseenter', function (evt) {
 	            var pt = getCoord(evt);
-	            state.tool.enter(state.mouse_down, pt);
+	            state.tool.enter(state.mouseDown, pt);
 	            state.last = pt;
-	            state.mouse_over = true;
+	            state.mouseOver = true;
 	        })      
 	        .bind('mousedown touchstart', mouseDown)
 	        .bind('mouseleave', function (evt) {
 	            var pt = getCoord(evt);
-	            state.tool.leave(state.mouse_down, pt);
-	            state.mouse_over = false;
+	            state.tool.leave(state.mouseDown, pt);
+	            state.mouseOver = false;
 	        });
         
         
@@ -105,9 +105,9 @@ TeledrawCanvas = (function () {
 	    	}
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
 	    	target = $(e.target).parents().andSelf();
-	        if (target.is(element) || state.mouse_down) {
+	        if (target.is(element) || state.mouseDown) {
 	            var next = getCoord(e);
-	            state.tool.move(state.mouse_down, state.last, next);
+	            state.tool.move(state.mouseDown, state.last, next);
 	            state.last = next;
 	            lastMoveEvent = e.type;
             	e.preventDefault();
@@ -119,7 +119,7 @@ TeledrawCanvas = (function () {
 	    		return true;
 	    	}
             var pt = state.last = getCoord(e);
-            state.mouse_down = true;
+            state.mouseDown = true;
             document.onselectstart = function() { return false; };
             $(window)
                 .one('mouseup touchend', mouseUp);
@@ -131,7 +131,7 @@ TeledrawCanvas = (function () {
 	    	if (e.type == 'touchend' && e.originalEvent.touches.length > 1) {
 	    		return true;
 	    	}
-        	state.mouse_down = false;
+        	state.mouseDown = false;
             document.onselectstart = function() { return true; };
             state.tool.up(state.last);
         	e.preventDefault();
@@ -152,196 +152,18 @@ TeledrawCanvas = (function () {
 	TeledrawCanvas.canvases = _canvases;
 	
 	
-	TeledrawCanvas.prototype.canvas = function () {
-	    return this._canvas;
-	};
-
-	TeledrawCanvas.prototype.cursor = function (c) {
-	    if (!c) {
-	        c = "default";
-	    }
-	    this.container.css('cursor', c);
-	};
-
-	TeledrawCanvas.prototype.ctx = function () {
-	    return this._ctx || (this._ctx = this.canvas().getContext('2d'));
-	};
+	// "Private" functions
 	
-	TeledrawCanvas.prototype.clear = function (nocheckpoint) {
-	    var ctx = this.ctx();
-		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		if (nocheckpoint !== true) {
-			this.history.checkpoint();
-		}
-	};
-	
-	TeledrawCanvas.prototype.defaults = function () {
-		this.setTool('pencil');
-		this.setAlpha(defaults.alpha);
-		this.setColor(defaults.color);
-		this.setStrokeSize(defaults.strokeSize);
-		this.setStrokeSoftness(defaults.strokeSoftness);
-	};
-	
-	TeledrawCanvas.prototype.toDataURL = function (w, h) {
-		if (w && h) {
-			w = parseInt(w);
-			h = parseInt(h);
-			var tmpcanvas = $('<canvas>').attr({
-				width: w,
-				height: h
-			}).get(0);
-			tmpcanvas.getContext('2d').drawImage(this.canvas(), 0, 0, w, h);
-			return tmpcanvas.toDataURL();
-		}
-		return this.canvas().toDataURL();
-	};
-	
-	TeledrawCanvas.prototype.getRevision = function (rev) {
-		return this.history.getRevision(rev);
-	};
-	TeledrawCanvas.prototype.setRevision = function (data) {
-		this.fromDataURL(data.data, function () {
-			this.history.setRevision(data.rev);
-		});
-	};
-
-	TeledrawCanvas.prototype.getTempCanvas = function (w, h) {
-		var tmp = $('<canvas>').get(0);
-		tmp.width = w || this._canvas.width;
-		tmp.height = h || this._canvas.height;
-		return tmp;
-	};
-
-	TeledrawCanvas.prototype.fromDataURL = function (url, cb) {
-		var self = this,
-			img = new Image();
-		img.onload = function () {
-			self.clear(true);
-			self.ctx().drawImage(img, 0, 0);
-			//self.history.checkpoint();
-			if (typeof cb == 'function') {
-				cb.call(self);
-			}
-		};
-		img.src = url;
-	};
-
-	TeledrawCanvas.prototype.getImageData = function () {
-		var ctx = this.ctx();
-	    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-	};
-
-	TeledrawCanvas.prototype.putImageData = function (data) {
-		this.ctx().putImageData(data, 0, 0);
-	};
-	
-	TeledrawCanvas.prototype.getColor = function () {
-	    return this.state.color.slice();
-	};
-	
-	TeledrawCanvas.prototype.setColor = function (rgba) {
+	TeledrawCanvas.prototype._setRGBAArrayColor = function (rgba) {
 		var state = this.state;
 		if (rgba.length === 4) {
 			state.globalAlpha = rgba.pop();
 		}
+		for (var i = rgba.length; i < 3; ++i) {
+			rgba.push(0);
+		}
 		state.color = rgba;
 		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.setHexColor =  function (hex, track) {
-		this.setColor(TeledrawCanvas.hex2rgb(hex));
-	};
-	
-	TeledrawCanvas.prototype.getHexColor = function () {
-		return TeledrawCanvas.rgb2hex(this.state.color);
-	};
-
-	TeledrawCanvas.prototype.setAlpha = function (a) {
-		this.state.globalAlpha = clamp(a, 0, 255);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.getAlpha = function () {
-		return this.state.globalAlpha;
-	};
-	
-	TeledrawCanvas.prototype.setStrokeSize = function (s) {
-		this.state.strokeSize = clamp(s, 500, 10000);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.setStrokeSoftness = function (s) {
-		this.state.strokeSoftness = clamp(s, 0, 60);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.setTool = function (name) {
-		this.state.previousTool = this.state.currentTool;
-		this.state.currentTool = name;
-		if (!TeledrawCanvas.tools[name]) {
-			throw new Error('Tool "'+name+'" not defined.');
-		}
-		this.state.tool = new TeledrawCanvas.tools[name](this);
-		this._updateTool();
-	};
-	
-	TeledrawCanvas.prototype.undo = function () {
-		//if (this.history.hasRevision(this.history.rev-1)) {
-			this.history.undo();
-		//}
-	};
-	
-	TeledrawCanvas.prototype.redo = function () {
-		//if (this.history.hasRevision(this.history.rev+1)) {
-			this.history.redo();
-		//}
-	};
-	
-	TeledrawCanvas.prototype.action = function (action) {
-		switch (action.type) {
-			case 'state':
-				this._updateState(action.state);
-				break;
-			case 'clear':
-				this.clear();
-				break;
-			case 'undo':
-				if (!this.history.hasRevision(action.rev)) {
-				} else {
-					this.history.undo();
-				}
-				break;
-			case 'redo':
-				if (!this.history.hasRevision(action.rev)) {
-				} else {
-					this.history.redo();
-				}
-				break;
-			case 'down':
-            	this.state.tool.down(arr2coord(action.pt));
-				break;
-			case 'move':
-				if (action.pts.length === 2) {
-	        		this.state.tool.move(true, arr2coord(action.pts[0]), arr2coord(action.pts[1]));
-	        	} else {
-	        		for (var i = 1, l = action.pts.length; i < l; ++i) {
-	        			this.state.tool.move(true, arr2coord(action.pts[i-1]), arr2coord(action.pts[i]));
-					}
-	        	}
-				break;
-			case 'up':
-            	this.state.tool.up(arr2coord(action.pt));
-				break;
-		}
-	};
-	
-	TeledrawCanvas.prototype.resize = function (w, h) {
-		var tmpcanvas = $(this._canvas).clone().get(0);
-		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
-		this._canvas.width = w;
-		this._canvas.height = h;
-		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
 	};
 	
 	TeledrawCanvas.prototype._updateState = function (state) {
@@ -357,93 +179,172 @@ TeledrawCanvas = (function () {
 	};
 	
 	
-	/***** Class methods *****/
+	// API
 	
-	TeledrawCanvas.rgba2rgb = function(rgba) {
-		if (rgba.length === 3 || rgba[3] === 255) {
-			return rgba;
-		}
-		var r = rgba[0],
-			g = rgba[1],
-			b = rgba[2],
-			a = rgba[3]/255,
-			out = [];
-		out[0] = (a * r) + (255 - a*255);
-		out[1] = (a * g) + (255 - a*255);
-		out[2] = (a * b) + (255 - a*255);
-		return out;
+	// returns the HTML Canvas element associated with this tdcanvas
+	TeledrawCanvas.prototype.canvas = function () {
+	    return this._canvas;
+	};
+
+	// returns a 2d rendering context for the canvas element
+	TeledrawCanvas.prototype.ctx = function () {
+	    return this._ctx || (this._ctx = this.canvas().getContext('2d'));
 	};
 	
-	TeledrawCanvas.rgb2hex = function (rgb) {
-		rgb = TeledrawCanvas.rgba2rgb(rgb);
-		function toHex(n) {
-			n = parseInt(n, 10);
-			if (isNaN(n)) {
-				return "00";
-			}
-			n = Math.max(0, Math.min(n, 255));
-			return "0123456789ABCDEF".charAt((n-n%16)/16) + "0123456789ABCDEF".charAt(n%16);
-		}
-		return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
-	};
-	
-	TeledrawCanvas.hex2rgb = function (hex) {
-		var r = 255, g = 255, b = 255;
-		hex = hex.replace(' ','');
-	    hex = (hex.charAt(0) == "#" ? hex.substr(1) : hex);
-	    if (hex.length == 6) {
-	    	r = parseInt(hex.substring(0, 2), 16);
-	    	g = parseInt(hex.substring(2, 4), 16);
-	    	b = parseInt(hex.substring(4, 6), 16);
-	    } else if (hex.length == 3) {
-	    	r = parseInt(hex.substring(0, 1) + hex.substring(0, 1), 16);
-	    	g = parseInt(hex.substring(1, 2) + hex.substring(1, 2), 16);
-	    	b = parseInt(hex.substring(2, 3) + hex.substring(2, 3), 16);
+	// sets the cursor css to be used when the mouse is over the canvas element
+	TeledrawCanvas.prototype.cursor = function (c) {
+	    if (!c) {
+	        c = "default";
 	    }
-	    return [r, g, b];
+	    this.container.css('cursor', c);
+	    return this;
 	};
 	
-	TeledrawCanvas.rgb2hsl = function (rgb) {
-		var r = rgb[0]/255,
-			g = rgb[1]/255,
-			b = rgb[2]/255,
-			max = Math.max(r, g, b),
-			min = Math.min(r, g, b),
-			d, h, s, l = (max + min) / 2;
-		if (max == min) {
-			h = s = 0;
-		} else {
-			d = max - min;
-			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-			switch (max) {
-				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-				case g: h = (b - r) / d + 2; break;
-				case b: h = (r - g) / d + 4; break;
-			}
-			h /= 6;
+	// clears the canvas and (unless noCheckpoint===true) pushes to the undoable history
+	TeledrawCanvas.prototype.clear = function (noCheckpoint) {
+	    var ctx = this.ctx();
+		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+		if (noCheckpoint !== true) {
+			this.history.checkpoint();
 		}
-		return [h, s, l];
+		return this;
 	};
 	
-	TeledrawCanvas.hex2hsl = function (hex) {
-		return TeledrawCanvas.rgb2hsl(TeledrawCanvas.hex2rgb(hex));
+	// resets the default tool and properties
+	TeledrawCanvas.prototype.defaults = function () {
+		this.setTool('pencil');
+		this.setAlpha(defaults.alpha);
+		this.setColor(defaults.color);
+		this.setStrokeSize(defaults.strokeSize);
+		this.setStrokeSoftness(defaults.strokeSoftness);
+		return this;
 	};
 	
-	TeledrawCanvas.cssColor = function (rgba) {
-	    if (rgba.length == 3) {
-	        return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
-	    }
-	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (floor(rgba[3]) / 0xFF) + ")";
+	// returns a data url (image/png) of the canvas, optionally scaled to w x h pixels
+	TeledrawCanvas.prototype.toDataURL = function (w, h) {
+		if (w && h) {
+			w = parseInt(w);
+			h = parseInt(h);
+			var tmpcanvas = $('<canvas>').attr({
+				width: w,
+				height: h
+			}).get(0);
+			tmpcanvas.getContext('2d').drawImage(this.canvas(), 0, 0, w, h);
+			return tmpcanvas.toDataURL();
+		}
+		return this.canvas().toDataURL();
 	};
 	
-	function coord2arr(coord) {
-		return [coord.x, coord.y];
-	}
+	// returns a new (blank) canvas element the same size as this tdcanvas element
+	TeledrawCanvas.prototype.getTempCanvas = function (w, h) {
+		var tmp = $('<canvas>').get(0);
+		tmp.width = w || this._canvas.width;
+		tmp.height = h || this._canvas.height;
+		return tmp;
+	};
+
+	// draws an image data url to the canvas and when it's finished, calls the given callback function
+	TeledrawCanvas.prototype.fromDataURL = function (url, cb) {
+		var self = this,
+			img = new Image();
+		img.onload = function () {
+			self.clear(true);
+			self.ctx().drawImage(img, 0, 0);
+			//self.history.checkpoint();
+			if (typeof cb == 'function') {
+				cb.call(self);
+			}
+		};
+		img.src = url;
+		return this;
+	};
+
+	// returns the ImageData of the whole canvas element
+	TeledrawCanvas.prototype.getImageData = function () {
+		var ctx = this.ctx();
+	    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+	};
+
+	// sets the ImageData of the canvas
+	TeledrawCanvas.prototype.putImageData = function (data) {
+		this.ctx().putImageData(data, 0, 0);
+		return this;
+	};
 	
-	function arr2coord(arr) {
-		return {x: arr[0], y: arr[1]};
-	}
+	// returns the current color in the form [r, g, b, a] (where each can be [0,255])
+	TeledrawCanvas.prototype.getColor = function () {
+	    return this.state.color.slice();
+	};
 	
-	TeledrawCanvas.clamp = clamp;
+	// sets the current color, either as an array (see getColor) or any acceptable css color string
+	TeledrawCanvas.prototype.setColor = function (color) {
+		if (!$.isArray(color)) {
+			color = TeledrawCanvas.util.parseColorString(color);
+		}
+		this._setRGBAArrayColor(color);
+		return this;
+	};
+	
+	// sets the current alpha to a, where a is a number in [0, 255]
+	TeledrawCanvas.prototype.setAlpha = function (a) {
+		this.state.globalAlpha = TeledrawCanvas.util.clamp(a, 0, 255);
+		this._updateTool();
+		return this;
+	};
+	
+	// returns the current alpha
+	TeledrawCanvas.prototype.getAlpha = function () {
+		return this.state.globalAlpha;
+	};
+	
+	// sets the current stroke size to s, where a is a number in [minStrokeSize, maxStrokeSize]
+	// lineWidth = 1 + floor(pow(strokeSize / 1000.0, 2));
+	TeledrawCanvas.prototype.setStrokeSize = function (s) {
+		this.state.strokeSize = TeledrawCanvas.util.clamp(s, this.state.minStrokeSize, this.state.maxStrokeSize);
+		this._updateTool();
+		return this;
+	};
+	
+	// sets the current stroke size to s, where a is a number in [minStrokeSoftness, maxStrokeSoftness]
+	TeledrawCanvas.prototype.setStrokeSoftness = function (s) {
+		this.state.strokeSoftness = TeledrawCanvas.util.clamp(s, this.state.minStrokeSoftness, this.state.maxStrokeSoftness);
+		this._updateTool();
+		return this;
+	};
+	
+	// set the current tool, given the string name of the tool (e.g. 'pencil')
+	TeledrawCanvas.prototype.setTool = function (name) {
+		this.state.previousTool = this.state.currentTool;
+		this.state.currentTool = name;
+		if (!TeledrawCanvas.tools[name]) {
+			throw new Error('Tool "'+name+'" not defined.');
+		}
+		this.state.tool = new TeledrawCanvas.tools[name](this);
+		this._updateTool();
+		return this;
+	};
+	
+	// undo to the last history checkpoint (if available)
+	TeledrawCanvas.prototype.undo = function () {
+		this.history.undo();
+		return this;
+	};
+	
+	// redo to the next history checkpoint (if available)
+	TeledrawCanvas.prototype.redo = function () {
+		this.history.redo();
+		return this;
+	};
+	
+	// resize the canvas to the given width and height, with the current image duplicated and stretched to the new size
+	TeledrawCanvas.prototype.resize = function (w, h) {
+		var tmpcanvas = $(this._canvas).clone().get(0);
+		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
+		this._canvas.width = w;
+		this._canvas.height = h;
+		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
+		return this;
+	};
+	
 	return TeledrawCanvas;
 })();

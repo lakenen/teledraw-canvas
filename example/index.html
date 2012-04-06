@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
-	<title>Teledraw Canvas</title>
+	<title>Teledraw Canvas Example</title>
 	<style type="text/css">
 		html, body {
 			background: #888;
@@ -24,16 +24,17 @@
 
 </head>
 <body>
-	<h1>Teledraw Canvas</h1>
+	<h1>Teledraw Canvas Example</h1>
 	<div id="container">
 		<canvas id="test-canvas" width="800" height="600">Oh crap... your browser doesn't support canvas!</canvas>
 	</div>
 	<button onclick="c.setTool('pencil')">pencil</button>
 	<button onclick="c.setTool('eraser')">eraser</button>
-	<button onclick="c.setTool('pencil');c.setHexColor('#000')">black</button>
-	<button onclick="c.setTool('pencil');c.setHexColor('#f00')">red</button>
-	<button onclick="c.setTool('pencil');c.setHexColor('#00b')">blue</button>
-	<button onclick="c.setTool('pencil');c.setHexColor('#0b0')">green</button>
+	<button onclick="c.setTool('pencil').setColor('#000')">black</button>
+	<button onclick="c.setTool('pencil').setColor('rgb(255,0,0)')">red</button>
+	<button onclick="c.setTool('pencil').setColor('hsl(240,100%,50%)')">blue</button>
+	<button onclick="c.setTool('pencil').setColor('#00bb00')">green</button>
+	<button onclick="c.setTool('pencil').setColor('yellow')">yellow</button>
 	<button onclick="c.setStrokeSize(c.state.strokeSize+1000)">bigger</button>
 	<button onclick="c.setStrokeSize(c.state.strokeSize-1000)">smaller</button>
 	<button onclick="c.clear()">clear</button>

@@ -6,6 +6,7 @@
 	
 	Pencil.stroke.prototype.lineWidth = 1;
 	Pencil.stroke.prototype.lineCap = 'round';
+	Pencil.stroke.prototype.smoothing = true;
 
 	Pencil.stroke.prototype.draw = function () {
 		var state = this.canvas.state,
@@ -17,8 +18,9 @@
 			shadowOffset = state.shadowOffset,
 			shadowBlur = state.shadowBlur,
 			lineWidth = state.lineWidth,
-			color = TeledrawCanvas.cssColor(state.color);
+			color = TeledrawCanvas.util.cssColor(state.color);
 		
+		ctx.globalAlpha = state.globalAlpha;
 		ctx.fillStyle = ctx.strokeStyle = color
 	    ctx.miterLimit = 100000;
 	    ctx.save();
@@ -56,16 +58,18 @@
 	        		// hack to avoid weird linejoins cutting the line
 	        		curr.x += 0.1; curr.y += 0.1;
 	        	}
-	            //if (!prevprev) {
-	            //	ctx.lineTo(curr.x, curr.y);
-	            //} else {
+	            if (this.smoothing) {
 	           		var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
 	         		ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
-	            //}
+	            } else {
+	            	ctx.lineTo(curr.x, curr.y);
+	            }
 	            prevprev = prev;
 	            prev = points[i];
 	        }
-	        ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+	        if (this.smoothing) {
+	       		ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+	        }
 	        ctx.stroke();
 	    }
 	    ctx.restore();
