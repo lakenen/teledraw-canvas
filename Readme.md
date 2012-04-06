@@ -127,10 +127,15 @@ var data = canvas.getImageData();
 canvas.putImageData(data);
 ```
 
+## Adding Tools
+
+Teledraw Canvas provides a ton of flexibility when it comes to adding new tools. Check back here soon for a detailed walkthrough and example on how to build your own tools!
+
 
 ## Tests
 
-(coming soon!)
+Coming soon!
+
 
 ## License 
 

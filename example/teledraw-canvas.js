@@ -443,6 +443,9 @@ TeledrawCanvas = (function () {
 	Snapshot.prototype._restoreBufferCanvas = function (tl, br) {
 		var ctx = this.canvas.ctx();
 		var w = br.x - tl.x, h = br.y - tl.y;
+		if (w === 0 || h === 0) {
+			return;
+		}
 		ctx.clearRect(tl.x, tl.y, w, h);
 	    ctx.drawImage(this.buffer, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
 	};
@@ -560,9 +563,6 @@ TeledrawCanvas = (function () {
 	    tool.prototype._updateBoundaries = function (pt) {
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas;
-	    	if (pt.x > canvas.width || pt.y > canvas.height) {
-	    		return;
-	    	}
 	    	if (pt.x < stroke.tl.x) {
 	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
 	    	}
