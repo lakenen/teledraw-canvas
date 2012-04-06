@@ -76,6 +76,9 @@
 	    tool.prototype._updateBoundaries = function (pt) {
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas;
+	    	if (pt.x > canvas.width || pt.y > canvas.height) {
+	    		return;
+	    	}
 	    	if (pt.x < stroke.tl.x) {
 	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
 	    	}

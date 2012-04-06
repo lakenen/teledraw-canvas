@@ -18,6 +18,18 @@
 		return (c < a ? a : c > b ? b : c);
 	};
 	
+	Util.opposite = function (color) {
+		if (!$.isArray(color)) {
+			color = TeledrawCanvas.util.parseColorString(color);
+		}
+		var hsl = Util.rgb2hsl(color);
+		hsl[0] = (hsl[0] + 180) % 360;
+		hsl[1] = 100 - hsl[1];
+		hsl[2] = 100 - hsl[2];
+		return Util.hsl2rgb(hsl);
+	};
+	
+	// kill the alpha channel!
 	Util.rgba2rgb = function(rgba) {
 		if (rgba.length === 3 || rgba[3] === 255) {
 			return rgba;
@@ -61,34 +73,11 @@
 			}
 			h /= 6;
 		}
-		return [h, s, l];
+		return [h, s*100, l*100];
 	};
-	
 	
 	Util.hex2hsl = function (hex) {
 		return Util.rgb2hsl(Util.hex2rgb(hex));
-	};
-	
-	Util.rgb2hsl = function (rgb) {
-		var r = rgb[0]/255,
-			g = rgb[1]/255,
-			b = rgb[2]/255,
-			max = Math.max(r, g, b),
-			min = Math.min(r, g, b),
-			d, h, s, l = (max + min) / 2;
-		if (max == min) {
-			h = s = 0;
-		} else {
-			d = max - min;
-			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-			switch (max) {
-				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-				case g: h = (b - r) / d + 2; break;
-				case b: h = (r - g) / d + 4; break;
-			}
-			h /= 6;
-		}
-		return [h, s, l];
 	};
 	
 	Util.hsl2rgb = function (hsl) {
@@ -143,7 +132,7 @@
 	}
 	
 	/**
-	* A class to parse color values
+	* A class to parse color values (into rgba array)
 	* @author Stoyan Stefanov <sstoo@gmail.com>
 	* @link   http://www.phpied.com/rgb-color-parser-in-javascript/
 	* @license Use it if you like it

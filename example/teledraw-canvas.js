@@ -45,14 +45,18 @@ TeledrawCanvas = (function () {
 	// global default state
 	var defaultState = {
 		last: null,
-		currentTool: null,
-		previousTool: null,
+		currentTool: 'pencil',
+		previousTool: 'pencil',
 		tool: null,
 		mouseDown: false,
 		mouseOver: false,
 		width: null,
 		height: null,
+		
+		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		shadowOffset: 2000,
+		
+		// default limits
 		maxHistory: 10,
 		minStrokeSize: 500,
 		maxStrokeSize: 10000,
@@ -69,18 +73,24 @@ TeledrawCanvas = (function () {
 		var element = this.element = $(elt);
 		var container = this.container = element.parent();
 		var state = this.state = $.extend({}, defaultState);
-		var canvas = this;
-		this.drawHandlers  = [];
-		this.history = new TeledrawCanvas.History(this);
 		
-		state.width = parseInt(element.attr('width'));
-		state.height = parseInt(element.attr('height'));
 		if (typeof element.get(0).getContext != 'function') {
 			alert('Your browser does not support HTML canvas!');
 			return;
 		}
+		
+		state.width = parseInt(element.attr('width'));
+		state.height = parseInt(element.attr('height'));
+		
+		var canvas = this;
+		this.drawHandlers  = [];
+		this.history = new TeledrawCanvas.History(this);
+		
+		this.defaults();
+		this.history.checkpoint();
+		_canvases[_id++] = this;
+		
 		container
-			.addClass('noselect')
 			.bind('mouseenter', function (evt) {
 	            var pt = getCoord(evt);
 	            state.tool.enter(state.mouseDown, pt);
@@ -143,10 +153,6 @@ TeledrawCanvas = (function () {
 				pageY = e.pageY || e.originalEvent.touches && e.originalEvent.touches[0].pageY;
 	        return {x: floor(pageX - offset.left) || 0, y: floor(pageY - offset.top) || 0};
 		}
-		
-		this.defaults();
-		this.history.checkpoint();
-		_canvases[_id++] = this;
 	};
 	
 	TeledrawCanvas.canvases = _canvases;
@@ -322,6 +328,11 @@ TeledrawCanvas = (function () {
 		this.state.tool = new TeledrawCanvas.tools[name](this);
 		this._updateTool();
 		return this;
+	};
+	
+	
+	TeledrawCanvas.prototype.previousTool = function () {
+		return this.setTool(this.state.previousTool);
 	};
 	
 	// undo to the last history checkpoint (if available)
@@ -549,6 +560,9 @@ TeledrawCanvas = (function () {
 	    tool.prototype._updateBoundaries = function (pt) {
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas;
+	    	if (pt.x > canvas.width || pt.y > canvas.height) {
+	    		return;
+	    	}
 	    	if (pt.x < stroke.tl.x) {
 	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
 	    	}
@@ -593,6 +607,18 @@ TeledrawCanvas = (function () {
 		return (c < a ? a : c > b ? b : c);
 	};
 	
+	Util.opposite = function (color) {
+		if (!$.isArray(color)) {
+			color = TeledrawCanvas.util.parseColorString(color);
+		}
+		var hsl = Util.rgb2hsl(color);
+		hsl[0] = (hsl[0] + 180) % 360;
+		hsl[1] = 100 - hsl[1];
+		hsl[2] = 100 - hsl[2];
+		return Util.hsl2rgb(hsl);
+	};
+	
+	// kill the alpha channel!
 	Util.rgba2rgb = function(rgba) {
 		if (rgba.length === 3 || rgba[3] === 255) {
 			return rgba;
@@ -636,34 +662,11 @@ TeledrawCanvas = (function () {
 			}
 			h /= 6;
 		}
-		return [h, s, l];
+		return [h, s*100, l*100];
 	};
-	
 	
 	Util.hex2hsl = function (hex) {
 		return Util.rgb2hsl(Util.hex2rgb(hex));
-	};
-	
-	Util.rgb2hsl = function (rgb) {
-		var r = rgb[0]/255,
-			g = rgb[1]/255,
-			b = rgb[2]/255,
-			max = Math.max(r, g, b),
-			min = Math.min(r, g, b),
-			d, h, s, l = (max + min) / 2;
-		if (max == min) {
-			h = s = 0;
-		} else {
-			d = max - min;
-			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-			switch (max) {
-				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-				case g: h = (b - r) / d + 2; break;
-				case b: h = (r - g) / d + 4; break;
-			}
-			h /= 6;
-		}
-		return [h, s, l];
 	};
 	
 	Util.hsl2rgb = function (hsl) {
@@ -718,7 +721,7 @@ TeledrawCanvas = (function () {
 	}
 	
 	/**
-	* A class to parse color values
+	* A class to parse color values (into rgba array)
 	* @author Stoyan Stefanov <sstoo@gmail.com>
 	* @link   http://www.phpied.com/rgb-color-parser-in-javascript/
 	* @license Use it if you like it
@@ -988,6 +991,107 @@ TeledrawCanvas = (function () {
 })(TeledrawCanvas);
 
 /**
+ * Ellipse tool
+ */
+(function (TeledrawCanvas) {
+	var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair");
+
+	Ellipse.stroke.prototype.bgColor = [255, 255, 255];
+	Ellipse.stroke.prototype.bgAlpha = 0;
+	Ellipse.stroke.prototype.lineWidth = 1;
+	
+	/*
+	Ellipse.prototype.keydown = function (mdown, key) {
+		if (key === 16) {
+			this.shiftKey = true;
+			if (mdown) {
+				this.draw();
+			}
+		}
+	};
+	
+	Ellipse.prototype.keyup = function (mdown, key) {
+		if (key === 16) {
+			this.shiftKey = false;
+			if (mdown) {
+				this.draw();
+			}
+		}
+	};
+	*/
+	
+	Ellipse.stroke.prototype.start = function (pt) {
+	    this.first = pt;
+	};
+
+	Ellipse.stroke.prototype.move = function (a, b) {
+	    this.second = b;
+	};
+
+	Ellipse.stroke.prototype.end = function (pt) {
+	    this.second = pt;
+	};
+
+	Ellipse.stroke.prototype.draw = function () {
+	    if (!this.first || !this.second) return;
+	    var x = this.first.x,
+	    	y = this.first.y,
+	    	w = this.second.x - x,
+	    	h = this.second.y - y,
+	    	ctx = this.ctx,
+	    	state = this.canvas.state,
+			shadowOffset = state.shadowOffset,
+			shadowBlur = state.shadowBlur,
+			lineWidth = state.lineWidth,
+			color = TeledrawCanvas.util.cssColor(state.color);
+		
+		ctx.lineJoin = ctx.lineCap = "round";
+		ctx.globalAlpha = state.globalAlpha;
+		ctx.fillStyle = ctx.strokeStyle = color;
+		ctx.miterLimit = 100000;
+	    
+	    if (this.tool.shiftKey) {
+	    	h = this.second.y > y ? Math.abs(w) : -Math.abs(w);
+	    }
+	    
+	    if (this.tool.fill) {
+		    drawEllipse(ctx, x, y, w, h);
+		    ctx.fill();
+	    } else {
+			if (shadowBlur > 0) {
+				ctx.shadowColor = color;
+				ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
+				ctx.shadowBlur = shadowBlur;
+				ctx.translate(-shadowOffset,-shadowOffset);
+			}
+			
+	        ctx.lineWidth = lineWidth;
+		    drawEllipse(ctx, x, y, w, h);
+			ctx.stroke();	
+	    }
+	};
+	
+	function drawEllipse(ctx, x, y, w, h) {
+		var kappa = .5522848;
+			ox = (w / 2) * kappa, // control point offset horizontal
+			oy = (h / 2) * kappa, // control point offset vertical
+			xe = x + w,           // x-end
+			ye = y + h,           // y-end
+			xm = x + w / 2,       // x-middle
+			ym = y + h / 2;       // y-middle
+		
+		ctx.beginPath();
+		ctx.moveTo(x, ym);
+		ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+		ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+		ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+		ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+		ctx.closePath();
+	}
+	
+})(TeledrawCanvas);
+
+/**
  * Eraser tool
  */
 (function (TeledrawCanvas) {
@@ -1000,6 +1104,119 @@ TeledrawCanvas = (function () {
 		this.color = [255, 255, 255, 255];
 	    this.ctx.globalCompositeOperation = 'destination-out';
 	    TeledrawCanvas.tools["pencil"].stroke.prototype.draw.call(this);
+	};
+})(TeledrawCanvas);
+
+/**
+ * Eyedropper tool
+ */
+(function (TeledrawCanvas) {
+	var ctor = function () {
+		this.previewContainer = $('<div>').css({
+			position: 'absolute',
+			width: 10,
+			height: 10,
+			border: '1px solid black'
+		});
+		$('body').append(this.previewContainer.hide());
+		if (this.canvas.state.mouseOver) {
+			this.previewContainer.show();
+		}
+	};
+	var EyeDropper = TeledrawCanvas.Tool.createTool("eyedropper", "crosshair", ctor);
+	
+	EyeDropper.prototype.pick = function (pt) {
+		var off = $(this.canvas.canvas()).offset();
+		this.previewContainer.offset({ left: off.left + pt.x + 15, top: off.top + pt.y + 5 });
+		var pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
+		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
+		var l = TeledrawCanvas.util.rgb2hsl(this.color)[2];
+		this.previewContainer.css({
+			'background-color': TeledrawCanvas.util.cssColor(this.color),
+			'border-color': l >= 50 ? '#000' : '#888'
+		});
+	};
+
+	EyeDropper.prototype.enter = function () {
+		this.previewContainer.show();
+	};
+	
+	EyeDropper.prototype.leave = function () {
+		this.previewContainer.hide();
+	};
+	
+	EyeDropper.prototype.move = function (down, from, pt) {
+		this.pick(pt);
+	};
+	
+	EyeDropper.prototype.down = function (pt) {
+		this.pick(pt);
+	};
+	
+	EyeDropper.prototype.up = function (pt) {
+	    this.pick(pt);
+		this.canvas.setColor(this.color);
+		this.previewContainer.remove();
+		this.canvas.previousTool();
+	};
+})(TeledrawCanvas);
+
+/**
+ * Line tool
+ */
+(function (TeledrawCanvas) {
+	var Line = TeledrawCanvas.Tool.createTool("line", "crosshair");
+	
+	//Line.prototype.keydown = Canvas.ellipse.prototype.keydown;
+	//Line.prototype.keyup = Canvas.ellipse.prototype.keyup;
+	
+	Line.stroke.prototype.lineWidth = 1;
+	Line.stroke.prototype.lineCap = 'round';
+	Line.stroke.prototype.bgColor = [255, 255, 255];
+	Line.stroke.prototype.bgAlpha = 0;
+	
+	Line.stroke.prototype.start = function (pt) {
+	    this.first = pt;
+	};
+
+	Line.stroke.prototype.move = function (a, b) {
+	    this.second = b;
+	};
+
+	Line.stroke.prototype.end = function (pt) {
+	    this.second = pt;
+	};
+
+	Line.stroke.prototype.draw = function () {
+	    if (!this.first || !this.second) return;
+	    var first = $.extend({}, this.first),
+	    	second = $.extend({}, this.second),
+	    	a, x, y, pi = Math.PI;
+	    if (this.tool.shiftKey) {
+	    	x = second.x - first.x;
+	    	y = second.y - first.y;
+	    	a = Math.atan2(y, x);
+	    	
+	    	if ((a >= -pi*7/8 && a < -pi*5/8) ||
+	    		(a >= -pi*3/8 && a < -pi/8))
+	    	{
+	    		second.y = first.y - Math.abs(x); // NW, NE
+	    	} else
+	    	if ((a >= -pi*5/8 && a < -pi*3/8) ||
+	    		(a >= pi*3/8 && a < pi*5/8))
+	    	{
+	    		second.x = first.x; // N, S
+	    	} else
+	    	if ((a >= pi/8 && a < pi*3/8) || 
+	    		(a >= pi*5/8 && a < pi*7/8))
+	    	{
+	    		second.y = first.y + Math.abs(x); // SE, SW
+	    	} else {
+	    		second.y = first.y; // E, W
+	    	}
+	    }
+	    this.points = [first, second];
+	    TeledrawCanvas.tools['pencil'].stroke.prototype.draw.call(this);
 	};
 })(TeledrawCanvas);
 
@@ -1026,9 +1243,8 @@ TeledrawCanvas = (function () {
 			color = TeledrawCanvas.util.cssColor(state.color);
 		
 		ctx.globalAlpha = state.globalAlpha;
-		ctx.fillStyle = ctx.strokeStyle = color
+		ctx.fillStyle = ctx.strokeStyle = color;
 	    ctx.miterLimit = 100000;
-	    ctx.save();
 	    if (shadowBlur > 0) {
 	    	ctx.shadowColor = color;
 			ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
@@ -1077,7 +1293,78 @@ TeledrawCanvas = (function () {
 	        }
 	        ctx.stroke();
 	    }
-	    ctx.restore();
 	};
 })(TeledrawCanvas);
 
+/**
+ * Rectangle tool
+ */
+(function (TeledrawCanvas) {
+	var Rectangle = TeledrawCanvas.Tool.createTool("rectangle", "crosshair");
+
+	Rectangle.stroke.prototype.bgColor = [255, 255, 255];
+	Rectangle.stroke.prototype.bgAlpha = 0;
+	Rectangle.stroke.prototype.lineWidth = 1;
+	
+	//Rectangle.prototype.keydown = Canvas.ellipse.prototype.keydown;
+	//Rectangle.prototype.keyup = Canvas.ellipse.prototype.keyup;
+
+	Rectangle.stroke.prototype.start = function (pt) {
+	    this.first = pt;
+	};
+
+	Rectangle.stroke.prototype.move = function (a, b) {
+	    this.second = b;
+	};
+
+	Rectangle.stroke.prototype.end = function (pt) {
+	    this.second = pt;
+	};
+
+	Rectangle.stroke.prototype.draw = function () {
+	    if (!this.first || !this.second) return;
+	    var first = this.first,
+	    	second = $.extend({}, this.second),
+	    	ctx = this.ctx,
+	    	state = this.canvas.state,
+			shadowOffset = state.shadowOffset,
+			shadowBlur = state.shadowBlur,
+			lineWidth = state.lineWidth,
+			color = TeledrawCanvas.util.cssColor(state.color);
+	    
+	    ctx.lineJoin = ctx.lineCap = "round";
+		ctx.globalAlpha = state.globalAlpha;
+		ctx.fillStyle = ctx.strokeStyle = color;
+		ctx.miterLimit = 100000;
+	    
+	    if (this.tool.shiftKey) {
+	    	var w = Math.abs(second.x - first.x);
+	    	second.y = first.y + (second.y > first.y ? w : -w);
+	    }
+	    
+	    if (this.tool.fill) {
+	    	drawRect(ctx, first, second);
+	    	ctx.fill();
+	    } else {
+	    	if (shadowBlur > 0) {
+				ctx.shadowColor = color;
+				ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
+				ctx.shadowBlur = shadowBlur;
+				ctx.translate(-shadowOffset,-shadowOffset);
+			}
+	    
+	        ctx.lineWidth = lineWidth;
+		    drawRect(ctx, first, second);
+			ctx.stroke();	
+	    }
+	};
+	
+	function drawRect(ctx, first, second) {
+	    ctx.beginPath();
+	    ctx.moveTo(first.x, first.y);
+	    ctx.lineTo(second.x, first.y);
+	    ctx.lineTo(second.x, second.y);
+	    ctx.lineTo(first.x, second.y);
+	    ctx.lineTo(first.x, first.y);
+	}
+})(TeledrawCanvas);

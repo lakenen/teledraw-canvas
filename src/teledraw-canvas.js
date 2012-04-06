@@ -45,14 +45,18 @@ TeledrawCanvas = (function () {
 	// global default state
 	var defaultState = {
 		last: null,
-		currentTool: null,
-		previousTool: null,
+		currentTool: 'pencil',
+		previousTool: 'pencil',
 		tool: null,
 		mouseDown: false,
 		mouseOver: false,
 		width: null,
 		height: null,
+		
+		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		shadowOffset: 2000,
+		
+		// default limits
 		maxHistory: 10,
 		minStrokeSize: 500,
 		maxStrokeSize: 10000,
@@ -69,18 +73,24 @@ TeledrawCanvas = (function () {
 		var element = this.element = $(elt);
 		var container = this.container = element.parent();
 		var state = this.state = $.extend({}, defaultState);
-		var canvas = this;
-		this.drawHandlers  = [];
-		this.history = new TeledrawCanvas.History(this);
 		
-		state.width = parseInt(element.attr('width'));
-		state.height = parseInt(element.attr('height'));
 		if (typeof element.get(0).getContext != 'function') {
 			alert('Your browser does not support HTML canvas!');
 			return;
 		}
+		
+		state.width = parseInt(element.attr('width'));
+		state.height = parseInt(element.attr('height'));
+		
+		var canvas = this;
+		this.drawHandlers  = [];
+		this.history = new TeledrawCanvas.History(this);
+		
+		this.defaults();
+		this.history.checkpoint();
+		_canvases[_id++] = this;
+		
 		container
-			.addClass('noselect')
 			.bind('mouseenter', function (evt) {
 	            var pt = getCoord(evt);
 	            state.tool.enter(state.mouseDown, pt);
@@ -143,10 +153,6 @@ TeledrawCanvas = (function () {
 				pageY = e.pageY || e.originalEvent.touches && e.originalEvent.touches[0].pageY;
 	        return {x: floor(pageX - offset.left) || 0, y: floor(pageY - offset.top) || 0};
 		}
-		
-		this.defaults();
-		this.history.checkpoint();
-		_canvases[_id++] = this;
 	};
 	
 	TeledrawCanvas.canvases = _canvases;
@@ -322,6 +328,11 @@ TeledrawCanvas = (function () {
 		this.state.tool = new TeledrawCanvas.tools[name](this);
 		this._updateTool();
 		return this;
+	};
+	
+	
+	TeledrawCanvas.prototype.previousTool = function () {
+		return this.setTool(this.state.previousTool);
 	};
 	
 	// undo to the last history checkpoint (if available)

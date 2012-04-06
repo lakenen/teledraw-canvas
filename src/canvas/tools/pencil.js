@@ -21,9 +21,8 @@
 			color = TeledrawCanvas.util.cssColor(state.color);
 		
 		ctx.globalAlpha = state.globalAlpha;
-		ctx.fillStyle = ctx.strokeStyle = color
+		ctx.fillStyle = ctx.strokeStyle = color;
 	    ctx.miterLimit = 100000;
-	    ctx.save();
 	    if (shadowBlur > 0) {
 	    	ctx.shadowColor = color;
 			ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
@@ -72,7 +71,6 @@
 	        }
 	        ctx.stroke();
 	    }
-	    ctx.restore();
 	};
 })(TeledrawCanvas);
 
