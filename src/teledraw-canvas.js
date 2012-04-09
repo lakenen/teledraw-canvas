@@ -53,6 +53,7 @@ TeledrawCanvas = (function () {
 		width: null,
 		height: null,
 		
+		
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		shadowOffset: 2000,
 		
@@ -64,23 +65,37 @@ TeledrawCanvas = (function () {
 		maxStrokeSoftness: 100
 	};
 	
-	var TeledrawCanvas = function (elt) {
-		if (typeof elt.getContext == 'function') {
-			this._canvas = elt;
-		} else {
-			this._canvas = $(elt).get(0);
-		}
+	var TeledrawCanvas = function (elt, options) {
 		var element = this.element = $(elt);
 		var container = this.container = element.parent();
-		var state = this.state = $.extend({}, defaultState);
+		var state = this.state = $.extend({}, defaultState, options);
 		
 		if (typeof element.get(0).getContext != 'function') {
 			alert('Your browser does not support HTML canvas!');
 			return;
 		}
 		
-		state.width = parseInt(element.attr('width'));
-		state.height = parseInt(element.attr('height'));
+		state.width = state.displayWidth || state.width || parseInt(element.attr('width'));
+		state.height = state.displayHeight || state.height || parseInt(element.attr('height'));
+		state.fullWidth = state.fullWidth || state.width;
+		state.fullHeight = state.fullHeight || state.height;
+		
+		element.attr({
+			width: state.width,
+			height: state.height
+		});
+		
+		if (typeof elt.getContext == 'function') {
+			this._displayCanvas = elt;
+		} else {
+			this._displayCanvas = $(elt).get(0);
+		}
+		
+		this._canvas =  $('<canvas>').attr({
+			width: state.fullWidth,
+			height: state.fullHeight
+		}).get(0);
+		
 		
 		var canvas = this;
 		this.drawHandlers  = [];
@@ -194,7 +209,7 @@ TeledrawCanvas = (function () {
 
 	// returns a 2d rendering context for the canvas element
 	TeledrawCanvas.prototype.ctx = function () {
-	    return this._ctx || (this._ctx = this.canvas().getContext('2d'));
+	    return this._ctx || (this._ctx = this._canvas.getContext('2d'));
 	};
 	
 	// sets the cursor css to be used when the mouse is over the canvas element
