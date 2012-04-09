@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 1.0
+	Version 0.5.0 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -53,6 +53,8 @@ TeledrawCanvas = (function () {
 		width: null,
 		height: null,
 		
+		currentZoom: 1,
+		currentOffset: { x: 0, y: 0 },
 		
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		shadowOffset: 2000,
@@ -80,16 +82,16 @@ TeledrawCanvas = (function () {
 		state.fullWidth = state.fullWidth || state.width;
 		state.fullHeight = state.fullHeight || state.height;
 		
+		if (state.width / state.fullWidth !== state.height / state.fullHeight) {
+			throw new Error('Display and full canvas aspect ratios differ!');
+		}
+		
 		element.attr({
 			width: state.width,
 			height: state.height
 		});
 		
-		if (typeof elt.getContext == 'function') {
-			this._displayCanvas = elt;
-		} else {
-			this._displayCanvas = $(elt).get(0);
-		}
+		this._displayCanvas = $(element).get(0);
 		
 		this._canvas =  $('<canvas>').attr({
 			width: state.fullWidth,
@@ -102,10 +104,29 @@ TeledrawCanvas = (function () {
 		this.history = new TeledrawCanvas.History(this);
 		
 		this.defaults();
+		this.zoom(0);
 		this.history.checkpoint();
 		_canvases[_id++] = this;
-		
+		var gInitZoom;
 		container
+			.bind('gesturestart', function (evt) {
+	    		if (state.tool.name == 'grab') {
+					gInitZoom = state.currentZoom;
+	    		}
+			})
+			.bind('gesturechange', function (evt) {
+	    		if (state.tool.name == 'grab') {
+	    			var pt = state.last;//$.extend({},state.last);
+	    			canvas.zoom(gInitZoom*evt.originalEvent.scale, pt);
+	    		}
+	    		evt.preventDefault();
+			})
+			.bind('gestureend', function (evt) {
+			})
+			.bind('dblclick', function (evt) {
+				var pt = getCoord(evt);
+	            state.tool.dblclick(pt);
+			})
 			.bind('mouseenter', function (evt) {
 	            var pt = getCoord(evt);
 	            state.tool.enter(state.mouseDown, pt);
@@ -126,6 +147,13 @@ TeledrawCanvas = (function () {
 	    var lastMoveEvent = null;
 	    function mouseMove(e) {
 	    	if (e.type == 'touchmove' && e.originalEvent.touches.length > 1) {
+	    		/*if (state.mouseDown) {
+	    			// try to undo what was done...
+	    			if (state.tool.currentStroke) {
+	    				state.tool.currentStroke.restore();
+	    				state.tool.currentStroke = null;
+	    			}
+	    		}*/
 	    		return true;
 	    	}
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
@@ -141,6 +169,7 @@ TeledrawCanvas = (function () {
 
 	    function mouseDown(e) {
 	    	if (e.type == 'touchstart' && e.originalEvent.touches.length > 1) {
+	    		state.last = getCoord(e);
 	    		return true;
 	    	}
             var pt = state.last = getCoord(e);
@@ -166,7 +195,12 @@ TeledrawCanvas = (function () {
 	        var offset = element.offset(),
 		        pageX = e.pageX || e.originalEvent.touches && e.originalEvent.touches[0].pageX,
 				pageY = e.pageY || e.originalEvent.touches && e.originalEvent.touches[0].pageY;
-	        return {x: floor(pageX - offset.left) || 0, y: floor(pageY - offset.top) || 0};
+	        return {
+	        	x: floor((pageX - offset.left)/state.currentZoom) + state.currentOffset.x || 0,
+	        	y: floor((pageY - offset.top)/state.currentZoom) + state.currentOffset.y || 0,
+	        	xd: floor(pageX - offset.left) || 0,
+	        	yd: floor(pageY - offset.top) || 0
+	        };
 		}
 	};
 	
@@ -187,16 +221,23 @@ TeledrawCanvas = (function () {
 		this._updateTool();
 	};
 	
-	TeledrawCanvas.prototype._updateState = function (state) {
-		$.extend(this.state, state);
-		this.setTool(state.currentTool, true);
-	};
-	
 	TeledrawCanvas.prototype._updateTool = function () {
 		var lw = 1 + floor(pow(this.state.strokeSize / 1000.0, 2));
 		var sb = floor(pow(this.state.strokeSoftness, 1.3) / 300.0 * lw);
 		this.state.lineWidth = lw;
 		this.state.shadowBlur = sb;
+	};
+	
+	TeledrawCanvas.prototype.updateDisplayCanvas = function () {
+		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+			off = this.state.currentOffset,
+			zoom = this.state.currentZoom, 
+			dw = dctx.canvas.width,
+			dh = dctx.canvas.height,
+			sw = dw / zoom,
+			sh = dh / zoom;
+		dctx.clearRect(0, 0, dw, dh);
+		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
 	};
 	
 	
@@ -217,7 +258,11 @@ TeledrawCanvas = (function () {
 	    if (!c) {
 	        c = "default";
 	    }
-	    this.container.css('cursor', c);
+	    var cursors = c.split(/,\s*/);
+	    do {
+	    	c = cursors.shift();
+	    	this.container.css('cursor', c);
+	    } while (c.length && this.container.css('cursor') != c);
 	    return this;
 	};
 	
@@ -271,6 +316,7 @@ TeledrawCanvas = (function () {
 		img.onload = function () {
 			self.clear(true);
 			self.ctx().drawImage(img, 0, 0);
+			self.updateDisplayCanvas();
 			//self.history.checkpoint();
 			if (typeof cb == 'function') {
 				cb.call(self);
@@ -370,6 +416,49 @@ TeledrawCanvas = (function () {
 		this._canvas.height = h;
 		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
 		return this;
+	};
+	
+	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
+	// optionally at a given point (otherwise in the center of the current display)
+	TeledrawCanvas.prototype.zoom = function (z, pt) {
+		var panx = 0, 
+			pany = 0,
+			currentZoom = this.state.currentZoom,
+			displayWidth = this._displayCanvas.width,
+			displayHeight = this._displayCanvas.height,
+			pt = pt || { xd: displayWidth/2, yd: displayHeight/2};
+		z = TeledrawCanvas.util.clamp(z || 0, displayWidth / this._canvas.width, 4);
+		if (z !== currentZoom) {
+			if (z > currentZoom) {
+				panx = -(displayWidth/currentZoom - displayWidth/z + (pt.xd - displayWidth/2)/currentZoom)/2;
+				pany = -(displayHeight/currentZoom - displayHeight/z + (pt.yd - displayHeight/2)/currentZoom)/2;
+			} else if (z < currentZoom) {
+				panx = (displayWidth/z - displayWidth/currentZoom)/2;
+				pany = (displayHeight/z - displayHeight/currentZoom)/2;
+			}
+			panx *= z;
+			pany *= z;
+		}
+		console.log(panx, pany);
+		this.state.currentZoom = z;
+		this.pan(panx, pany);
+		this.updateDisplayCanvas();
+	};
+	
+	// pan the canvas to the given (relative) x,y position
+	TeledrawCanvas.prototype.pan = function (x, y) {
+		var zoom = this.state.currentZoom,
+			currentX = this.state.currentOffset.x,
+			currentY = this.state.currentOffset.y,
+			maxWidth = this._canvas.width - this._displayCanvas.width/zoom,
+			maxHeight = this._canvas.height - this._displayCanvas.height/zoom;
+		x = currentX - (x || 0)/zoom;
+		y = currentY - (y || 0)/zoom;
+		this.state.currentOffset = {
+			x: floor(TeledrawCanvas.util.clamp(x, 0, maxWidth)),
+			y: floor(TeledrawCanvas.util.clamp(y, 0, maxHeight))
+		};
+		this.updateDisplayCanvas();
 	};
 	
 	return TeledrawCanvas;

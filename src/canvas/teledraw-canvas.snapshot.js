@@ -14,6 +14,7 @@
 		} else {
 			this._restoreBufferCanvas({ x:0, y:0 }, { x:this.canvas.canvas().width, y:this.canvas.canvas().height });
 		}
+		this.canvas.updateDisplayCanvas();
 	};
 	
 	Snapshot.prototype.toDataURL = function () {
@@ -28,6 +29,7 @@
 	
 	Snapshot.prototype._restoreBufferCanvas = function (tl, br) {
 		var ctx = this.canvas.ctx();
+		
 		var w = br.x - tl.x, h = br.y - tl.y;
 		if (w === 0 || h === 0) {
 			return;
