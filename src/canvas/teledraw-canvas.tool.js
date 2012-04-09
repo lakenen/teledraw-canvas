@@ -6,6 +6,7 @@
 
 	Tool.prototype.down = function (pt) {};
 	Tool.prototype.up = function (pt) {};
+	Tool.prototype.dblclick = function (pt) {};
 	Tool.prototype.move = function (mdown, pt_from, pt_to) {};
 	Tool.prototype.enter = function (mdown, pt) {};
 	Tool.prototype.leave = function (mdown, pt) {};
@@ -70,6 +71,7 @@
 	    	this.currentStroke.ctx.save();
 	    	this.currentStroke.restore();
 	    	this.currentStroke.draw();
+			this.canvas.updateDisplayCanvas();
 	    	this.currentStroke.ctx.restore();
 	    };
 	    

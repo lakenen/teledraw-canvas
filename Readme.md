@@ -2,6 +2,8 @@
 
 Teledraw Canvas is an HTML5 Canvas drawing engine that is used in [Teledraw.com](http://teledraw.com/). It is currently dependent on jQuery (1.5+), but the goal is to make it standalone eventually.
 
+You can see a very basic live demo at [lakenen.com/teledraw-canvas](http://lakenen.com/teledraw-canvas).
+
 ## How to use
 
 Include jQuery and teledraw-canvas.js in your page, and from there it's as simple as creating a canvas element with whatever width and hight you want:

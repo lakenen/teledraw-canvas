@@ -18,7 +18,10 @@
 	<script type="text/javascript">
 		var c;
 		$(function () {
-			c = new TeledrawCanvas('#test-canvas');
+			c = new TeledrawCanvas('#test-canvas', {
+				fullWidth: 1600,
+				fullHeight: 1200
+			});
 		});
 	</script>
 
@@ -30,6 +33,7 @@
 	</div>
 	<button onclick="c.setTool('pencil')">pencil</button>
 	<button onclick="c.setTool('eraser')">eraser</button>
+	<button onclick="c.setTool('grab')">pan</button>
 	<button onclick="c.setTool('pencil').setColor('#000')">black</button>
 	<button onclick="c.setTool('pencil').setColor('rgb(255,0,0)')">red</button>
 	<button onclick="c.setTool('pencil').setColor('hsl(240,100%,50%)')">blue</button>
@@ -40,5 +44,7 @@
 	<button onclick="c.clear()">clear</button>
 	<button onclick="c.undo()">undo</button>
 	<button onclick="c.redo()">redo</button>
+	<button onclick="c.zoom(c.state.currentZoom + 0.5)">zoom (+)</button>
+	<button onclick="c.zoom(c.state.currentZoom - 0.5)">zoom (-)</button>
 </body>
 </html>
