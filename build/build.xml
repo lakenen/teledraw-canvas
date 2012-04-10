@@ -3,6 +3,7 @@
 
 	<target name="build-js">
 		<concat destfile="${outputpath}">
+			<fileset dir="${basedir}/lib" includes="*.js"/>
 			<fileset dir="${basedir}/src" includes="teledraw-canvas.js"/>
 			<fileset dir="${basedir}/src/canvas" includes="*.js" excludes="tools/*"/>
 			<fileset dir="${basedir}/src/canvas/tools" includes="*.js"/>

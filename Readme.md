@@ -34,7 +34,7 @@ canvas.setColor('#fc0');
 canvas.setColor('rgb(255, 0, 0)');
 
 // by hsla
-canvas.setColor('hsl(240, 100%, 50%, 0.5)');
+canvas.setColor('hsla(240, 100%, 50%, 0.5)');
 
 // by common color name
 canvas.setColor('lightGoldenrodYellow');
@@ -80,7 +80,7 @@ canvas.setAlpha(255);
 canvas.setAlpha(0);
 ```
 
-### Clear the canvas, undo, redo, etc
+### Clear the canvas, undo, redo, zoom, pan, etc
 
 Here are some basic useful functions...
 
@@ -95,6 +95,15 @@ canvas.redo();
 
 // reset tool defaults
 canvas.defaults();
+
+// zoom 200% to the center of the display
+canvas.zoom(2);
+
+// zoom 200% centered at (100,100)
+canvas.zoom(2, 100, 100);
+
+// pan up and to the left 100px
+canvas.pan(-100, -100);
 ```
 
 

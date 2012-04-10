@@ -6,10 +6,14 @@
 
 	Tool.prototype.down = function (pt) {};
 	Tool.prototype.up = function (pt) {};
-	Tool.prototype.dblclick = function (pt) {};
-	Tool.prototype.move = function (mdown, pt_from, pt_to) {};
-	Tool.prototype.enter = function (mdown, pt) {};
-	Tool.prototype.leave = function (mdown, pt) {};
+	Tool.prototype.move = function (mouseDown, from, to) {};
+	Tool.prototype.enter = function (mouseDown, pt) {};
+	Tool.prototype.leave = function (mouseDown, pt) {};
+	Tool.prototype.keydown = function (mdown, key) {};
+	Tool.prototype.keyup = function (mdown, key) {};
+	Tool.prototype.preview = function () {};
+	Tool.prototype.alt_down = function () {};
+	Tool.prototype.alt_up = function () {};
 	
 	// A factory for creating tools
 	Tool.createTool = function (name, cursor, ctor) {
@@ -65,30 +69,32 @@
 	        	this.currentStroke = null;
 	            this.canvas.history.checkpoint();
 	        }
+	        this.canvas.trigger('tool.end');
 	    };
 	    
 	    tool.prototype.draw = function () {
 	    	this.currentStroke.ctx.save();
 	    	this.currentStroke.restore();
 	    	this.currentStroke.draw();
-			this.canvas.updateDisplayCanvas();
+			this.canvas.updateDisplayCanvas(this.currentStroke.tl, this.currentStroke.br);
 	    	this.currentStroke.ctx.restore();
 	    };
 	    
 	    tool.prototype._updateBoundaries = function (pt) {
 	    	var stroke = this.currentStroke,
-	    		canvas = stroke.ctx.canvas;
-	    	if (pt.x < stroke.tl.x) {
-	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
+	    		canvas = stroke.ctx.canvas,
+	    		strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
+	    	if (pt.x - strokeSize < stroke.tl.x) {
+	    		stroke.tl.x = TeledrawCanvas.util.clamp(Math.floor(pt.x - strokeSize), 0, canvas.width);
 	    	}
-	    	if (pt.x > stroke.br.x) {
-	    		stroke.br.x = TeledrawCanvas.util.clamp(pt.x + 50, 0, canvas.width);
+	    	if (pt.x + strokeSize > stroke.br.x) {
+	    		stroke.br.x = TeledrawCanvas.util.clamp(Math.floor(pt.x + strokeSize), 0, canvas.width);
 	    	}
-	    	if (pt.y < stroke.tl.y) {
-	    		stroke.tl.y = TeledrawCanvas.util.clamp(pt.y - 50, 0, canvas.height);
+	    	if (pt.y - strokeSize < stroke.tl.y) {
+	    		stroke.tl.y = TeledrawCanvas.util.clamp(Math.floor(pt.y - strokeSize), 0, canvas.height);
 	    	}
-	    	if (pt.y > stroke.br.y) {
-	    		stroke.br.y = TeledrawCanvas.util.clamp(pt.y + 50, 0, canvas.height);
+	    	if (pt.y + strokeSize > stroke.br.y) {
+	    		stroke.br.y = TeledrawCanvas.util.clamp(Math.floor(pt.y + strokeSize), 0, canvas.height);
 	    	}
 	    };
 	    

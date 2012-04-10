@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.5.0 (http://semver.org/)
+	Version 0.6.0 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -64,7 +64,8 @@ TeledrawCanvas = (function () {
 		minStrokeSize: 500,
 		maxStrokeSize: 10000,
 		minStrokeSoftness: 0,
-		maxStrokeSoftness: 100
+		maxStrokeSoftness: 100,
+		maxZoom: 8 // (8 == 800%)
 	};
 	
 	var TeledrawCanvas = function (elt, options) {
@@ -117,7 +118,7 @@ TeledrawCanvas = (function () {
 			.bind('gesturechange', function (evt) {
 	    		if (state.tool.name == 'grab') {
 	    			var pt = state.last;//$.extend({},state.last);
-	    			canvas.zoom(gInitZoom*evt.originalEvent.scale, pt);
+	    			canvas.zoom(gInitZoom*evt.originalEvent.scale, pt.xd, pt.yd);
 	    		}
 	    		evt.preventDefault();
 			})
@@ -228,6 +229,29 @@ TeledrawCanvas = (function () {
 		this.state.shadowBlur = sb;
 	};
 	
+	/*
+	TeledrawCanvas.prototype.updateDisplayCanvas = function (tl, br) {
+		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+			off = this.state.currentOffset,
+			zoom = this.state.currentZoom,
+			// bounding rect of the change
+			stl = tl || { x: 0, y: 0 },
+			sbr = br || { x: this._canvas.width, y: this._canvas.height },
+			dtl = { x: floor((stl.x - off.x)*zoom), y: floor((stl.y - off.y)*zoom) },
+			dbr = { x: floor((sbr.x - off.x)*zoom), y: floor((sbr.y - off.y)*zoom) },
+			sw = sbr.x - stl.x,
+			sh = sbr.y - stl.y,
+			dw = dbr.x - dtl.x,
+			dh = dbr.y - dtl.y;
+		if (sw === 0 || sh === 0) {
+			return;
+		}
+		// only clear and draw what we need to
+		dctx.clearRect(dtl.x, dtl.y, dw, dh);
+		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
+	};
+	*/
+	
 	TeledrawCanvas.prototype.updateDisplayCanvas = function () {
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
@@ -237,7 +261,9 @@ TeledrawCanvas = (function () {
 			sw = dw / zoom,
 			sh = dh / zoom;
 		dctx.clearRect(0, 0, dw, dh);
+		this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
+		this.trigger('display.update:after');
 	};
 	
 	
@@ -273,6 +299,7 @@ TeledrawCanvas = (function () {
 		if (noCheckpoint !== true) {
 			this.history.checkpoint();
 		}
+		this.updateDisplayCanvas();
 		return this;
 	};
 	
@@ -335,6 +362,7 @@ TeledrawCanvas = (function () {
 	// sets the ImageData of the canvas
 	TeledrawCanvas.prototype.putImageData = function (data) {
 		this.ctx().putImageData(data, 0, 0);
+		this.updateDisplayCanvas();
 		return this;
 	};
 	
@@ -352,10 +380,9 @@ TeledrawCanvas = (function () {
 		return this;
 	};
 	
-	// sets the current alpha to a, where a is a number in [0, 255]
+	// sets the current alpha to a, where a is a number in [0,1]
 	TeledrawCanvas.prototype.setAlpha = function (a) {
-		this.state.globalAlpha = TeledrawCanvas.util.clamp(a, 0, 255);
-		this._updateTool();
+		this.state.globalAlpha = TeledrawCanvas.util.clamp(a, 0, 1);
 		return this;
 	};
 	
@@ -408,31 +435,41 @@ TeledrawCanvas = (function () {
 		return this;
 	};
 	
-	// resize the canvas to the given width and height, with the current image duplicated and stretched to the new size
+	// resize the display canvas to the given width and height
+	// (throws an error if it's not the same aspect ratio as the source canvas)
+	// @todo/consider: release this constraint and just change the size of the source canvas?
 	TeledrawCanvas.prototype.resize = function (w, h) {
 		var tmpcanvas = $(this._canvas).clone().get(0);
 		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
 		this._canvas.width = w;
 		this._canvas.height = h;
 		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
+		this.updateDisplayCanvas();
 		return this;
 	};
 	
 	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
 	// optionally at a given point (otherwise in the center of the current display)
-	TeledrawCanvas.prototype.zoom = function (z, pt) {
+	TeledrawCanvas.prototype.zoom = function (z, x, y) {
 		var panx = 0, 
 			pany = 0,
 			currentZoom = this.state.currentZoom,
 			displayWidth = this._displayCanvas.width,
-			displayHeight = this._displayCanvas.height,
-			pt = pt || { xd: displayWidth/2, yd: displayHeight/2};
-		z = TeledrawCanvas.util.clamp(z || 0, displayWidth / this._canvas.width, 4);
+			displayHeight = this._displayCanvas.height;
+			
+		// if no point is specified, use the center of the canvas
+		x = TeledrawCanvas.util.clamp(x || displayWidth/2, 0, displayWidth);
+		y = TeledrawCanvas.util.clamp(y || displayHeight/2, 0, displayHeight);
+		
+		// restrict the zoom
+		z = TeledrawCanvas.util.clamp(z || 0, displayWidth / this._canvas.width, this.state.maxZoom);
 		if (z !== currentZoom) {
 			if (z > currentZoom) {
-				panx = -(displayWidth/currentZoom - displayWidth/z + (pt.xd - displayWidth/2)/currentZoom)/2;
-				pany = -(displayHeight/currentZoom - displayHeight/z + (pt.yd - displayHeight/2)/currentZoom)/2;
+				// zooming in
+				panx = -(displayWidth/currentZoom - displayWidth/z)/2 - (x - displayWidth/2)/currentZoom;
+				pany = -(displayHeight/currentZoom - displayHeight/z)/2 - (y - displayHeight/2)/currentZoom;
 			} else if (z < currentZoom) {
+				// zooming out
 				panx = (displayWidth/z - displayWidth/currentZoom)/2;
 				pany = (displayHeight/z - displayHeight/currentZoom)/2;
 			}
@@ -440,6 +477,7 @@ TeledrawCanvas = (function () {
 			pany *= z;
 		}
 		//console.log(panx, pany);
+		this.trigger('zoom', z);
 		this.state.currentZoom = z;
 		this.pan(panx, pany);
 		this.updateDisplayCanvas();
@@ -460,6 +498,9 @@ TeledrawCanvas = (function () {
 		};
 		this.updateDisplayCanvas();
 	};
+	
+	// events mixin
+	$.extend(TeledrawCanvas.prototype, Events);
 	
 	return TeledrawCanvas;
 })();

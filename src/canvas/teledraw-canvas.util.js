@@ -3,24 +3,27 @@
  */
 (function (TeledrawCanvas) {
 	var Util = function () { return Util; };
-	var floor = Math.floor,
+	var floor = Math.floor
+		round = Math.round,
 		min = Math.min,
 		max = Math.max;
 	
+	// returns a CSS-style rgb(a) string for the given RGBA array
 	Util.cssColor = function (rgba) {
 	    if (rgba.length == 3) {
 	        return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
 	    }
-	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (floor(rgba[3]) / 0xFF) + ")";
+	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (round(rgba[3]*100)/100) + ")";
 	};
 	
+	// constrains c within a and b
 	Util.clamp = function (c, a, b) {
 		return (c < a ? a : c > b ? b : c);
 	};
 	
 	Util.opposite = function (color) {
 		if (!$.isArray(color)) {
-			color = TeledrawCanvas.util.parseColorString(color);
+			color = Util.parseColorString(color);
 		}
 		var hsl = Util.rgb2hsl(color);
 		hsl[0] = (hsl[0] + 180) % 360;
@@ -37,7 +40,7 @@
 		var r = rgba[0],
 			g = rgba[1],
 			b = rgba[2],
-			a = rgba[3]/255,
+			a = rgba[3],
 			out = [];
 		out[0] = (a * r) + (255 - a*255);
 		out[1] = (a * g) + (255 - a*255);
@@ -314,7 +317,7 @@
 				parseInt(bits[1]),
 				parseInt(bits[2]),
 				parseInt(bits[3]),
-				255
+				1
 				];
 			}
 		},
@@ -326,7 +329,7 @@
 				parseInt(bits[1]),
 				parseInt(bits[2]),
 				parseInt(bits[3]),
-				parseFloat(bits[4]) * 0xFF
+				parseFloat(bits[4])
 				];
 			}
 		},
@@ -335,7 +338,7 @@
 			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
 			process: function (bits){
 				var rgba = Util.hsl2rgb(bits.slice(1, 4));
-				rgba.push(255);
+				rgba.push(1);
 				return rgba;
 			}
 		},
@@ -344,7 +347,7 @@
 			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
 			process: function (bits){
 				var rgba = Util.hsl2rgb(bits.slice(1, 4));
-				rgba.push(parseFloat(bits[4]) * 0xFF);
+				rgba.push(parseFloat(bits[4]));
 				return rgba;
 			}
 		},
@@ -356,7 +359,7 @@
 				parseInt(bits[1], 16),
 				parseInt(bits[2], 16),
 				parseInt(bits[3], 16),
-				255
+				1
 				];
 			}
 		},
@@ -368,7 +371,7 @@
 				parseInt(bits[1] + bits[1], 16),
 				parseInt(bits[2] + bits[2], 16),
 				parseInt(bits[3] + bits[3], 16),
-				255
+				1
 				];
 			}
 		}
@@ -394,8 +397,8 @@
 		r = (r < 0 || isNaN(r)) ? 0 : ((r > 255) ? 255 : r);
 		g = (g < 0 || isNaN(g)) ? 0 : ((g > 255) ? 255 : g);
 		b = (b < 0 || isNaN(b)) ? 0 : ((b > 255) ? 255 : b);
-		a = (a < 0 || isNaN(a)) ? 0 : ((a > 255) ? 255 : a);
-		return ok ? [r, g, b, a] : [0, 0, 0, 255];
+		a = (a < 0 || isNaN(a)) ? 0 : ((a > 1) ? 1 : a);
+		return ok ? [r, g, b, a] : [0, 0, 0, 1];
 	}
 	
 	TeledrawCanvas.util = Util;

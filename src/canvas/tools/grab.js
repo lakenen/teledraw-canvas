@@ -36,7 +36,7 @@
 	Grab.prototype.dblclick = function (pt) {
 		cancelAnimationFrame(this._momentumId);
 	    this.dx = this.dy = 0;
-	    this.canvas.zoom(this.canvas.state.currentZoom*2, pt);
+	    this.canvas.zoom(this.canvas.state.currentZoom*2, pt.xd, pt.yd);
 	};
 	
 	Grab.prototype.momentum = function (dx, dy) {

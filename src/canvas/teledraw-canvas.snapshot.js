@@ -9,12 +9,16 @@
 	};
 
 	Snapshot.prototype.restore = function (stroke) {
+		var tl, br;
 		if (stroke) {
-			this._restoreBufferCanvas(stroke.tl, stroke.br);
+			tl = stroke.tl;
+			br = stroke.br;
 		} else {
-			this._restoreBufferCanvas({ x:0, y:0 }, { x:this.canvas.canvas().width, y:this.canvas.canvas().height });
+			tl = { x:0, y:0 };
+			br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
 		}
-		this.canvas.updateDisplayCanvas();
+		this._restoreBufferCanvas(tl, br);
+		this.canvas.updateDisplayCanvas(tl, br);
 	};
 	
 	Snapshot.prototype.toDataURL = function () {

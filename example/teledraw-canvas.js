@@ -1,7 +1,132 @@
+//     Backbone.js 0.9.2
+
+//     (c) 2010-2012 Jeremy Ashkenas, DocumentCloud Inc.
+//     Backbone may be freely distributed under the MIT license.
+//     For all details and documentation:
+//     http://backbonejs.org
+
+Events = (function () {
+	// Backbone.Events
+	// -----------------
+	
+  	var slice = Array.prototype.slice;
+	// Regular expression used to split event strings
+	var eventSplitter = /\s+/;
+	
+	// A module that can be mixed in to *any object* in order to provide it with
+	// custom events. You may bind with `on` or remove with `off` callback functions
+	// to an event; trigger`-ing an event fires all callbacks in succession.
+	//
+	//		 var object = {};
+	//		 _.extend(object, Backbone.Events);
+	//		 object.on('expand', function(){ alert('expanded'); });
+	//		 object.trigger('expand');
+	//
+	var Events = {
+	
+	// Bind one or more space separated events, `events`, to a `callback`
+	// function. Passing `"all"` will bind the callback to all events fired.
+	on: function(events, callback, context) {
+	
+		var calls, event, node, tail, list;
+		if (!callback) return this;
+		events = events.split(eventSplitter);
+		calls = this._callbacks || (this._callbacks = {});
+	
+		// Create an immutable callback list, allowing traversal during
+		// modification.	The tail is an empty object that will always be used
+		// as the next node.
+		while (event = events.shift()) {
+		list = calls[event];
+		node = list ? list.tail : {};
+		node.next = tail = {};
+		node.context = context;
+		node.callback = callback;
+		calls[event] = {tail: tail, next: list ? list.next : node};
+		}
+	
+		return this;
+	},
+	
+	// Remove one or many callbacks. If `context` is null, removes all callbacks
+	// with that function. If `callback` is null, removes all callbacks for the
+	// event. If `events` is null, removes all bound callbacks for all events.
+	off: function(events, callback, context) {
+		var event, calls, node, tail, cb, ctx;
+	
+		// No events, or removing *all* events.
+		if (!(calls = this._callbacks)) return;
+		if (!(events || callback || context)) {
+		delete this._callbacks;
+		return this;
+		}
+	
+		// Loop through the listed events and contexts, splicing them out of the
+		// linked list of callbacks if appropriate.
+		events = events ? events.split(eventSplitter) : _.keys(calls);
+		while (event = events.shift()) {
+		node = calls[event];
+		delete calls[event];
+		if (!node || !(callback || context)) continue;
+		// Create a new list, omitting the indicated callbacks.
+		tail = node.tail;
+		while ((node = node.next) !== tail) {
+			cb = node.callback;
+			ctx = node.context;
+			if ((callback && cb !== callback) || (context && ctx !== context)) {
+			this.on(event, cb, ctx);
+			}
+		}
+		}
+	
+		return this;
+	},
+	
+	// Trigger one or many events, firing all bound callbacks. Callbacks are
+	// passed the same arguments as `trigger` is, apart from the event name
+	// (unless you're listening on `"all"`, which will cause your callback to
+	// receive the true name of the event as the first argument).
+	trigger: function(events) {
+		var event, node, calls, tail, args, all, rest;
+		if (!(calls = this._callbacks)) return this;
+		all = calls.all;
+		events = events.split(eventSplitter);
+		rest = slice.call(arguments, 1);
+	
+		// For each event, walk through the linked list of callbacks twice,
+		// first to trigger the event, then to trigger any `"all"` callbacks.
+		while (event = events.shift()) {
+		if (node = calls[event]) {
+			tail = node.tail;
+			while ((node = node.next) !== tail) {
+			node.callback.apply(node.context || this, rest);
+			}
+		}
+		if (node = all) {
+			tail = node.tail;
+			args = [event].concat(rest);
+			while ((node = node.next) !== tail) {
+			node.callback.apply(node.context || this, args);
+			}
+		}
+		}
+	
+		return this;
+	}
+	
+	};
+	
+	// Aliases for backwards compatibility.
+	Events.bind	 = Events.on;
+	Events.unbind = Events.off;
+	
+	return Events;
+})();
+
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.5.0 (http://semver.org/)
+	Version 0.6.0 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -64,7 +189,8 @@ TeledrawCanvas = (function () {
 		minStrokeSize: 500,
 		maxStrokeSize: 10000,
 		minStrokeSoftness: 0,
-		maxStrokeSoftness: 100
+		maxStrokeSoftness: 100,
+		maxZoom: 8 // (8 == 800%)
 	};
 	
 	var TeledrawCanvas = function (elt, options) {
@@ -117,7 +243,7 @@ TeledrawCanvas = (function () {
 			.bind('gesturechange', function (evt) {
 	    		if (state.tool.name == 'grab') {
 	    			var pt = state.last;//$.extend({},state.last);
-	    			canvas.zoom(gInitZoom*evt.originalEvent.scale, pt);
+	    			canvas.zoom(gInitZoom*evt.originalEvent.scale, pt.xd, pt.yd);
 	    		}
 	    		evt.preventDefault();
 			})
@@ -228,6 +354,29 @@ TeledrawCanvas = (function () {
 		this.state.shadowBlur = sb;
 	};
 	
+	/*
+	TeledrawCanvas.prototype.updateDisplayCanvas = function (tl, br) {
+		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+			off = this.state.currentOffset,
+			zoom = this.state.currentZoom,
+			// bounding rect of the change
+			stl = tl || { x: 0, y: 0 },
+			sbr = br || { x: this._canvas.width, y: this._canvas.height },
+			dtl = { x: floor((stl.x - off.x)*zoom), y: floor((stl.y - off.y)*zoom) },
+			dbr = { x: floor((sbr.x - off.x)*zoom), y: floor((sbr.y - off.y)*zoom) },
+			sw = sbr.x - stl.x,
+			sh = sbr.y - stl.y,
+			dw = dbr.x - dtl.x,
+			dh = dbr.y - dtl.y;
+		if (sw === 0 || sh === 0) {
+			return;
+		}
+		// only clear and draw what we need to
+		dctx.clearRect(dtl.x, dtl.y, dw, dh);
+		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
+	};
+	*/
+	
 	TeledrawCanvas.prototype.updateDisplayCanvas = function () {
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
@@ -237,7 +386,9 @@ TeledrawCanvas = (function () {
 			sw = dw / zoom,
 			sh = dh / zoom;
 		dctx.clearRect(0, 0, dw, dh);
+		this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
+		this.trigger('display.update:after');
 	};
 	
 	
@@ -273,6 +424,7 @@ TeledrawCanvas = (function () {
 		if (noCheckpoint !== true) {
 			this.history.checkpoint();
 		}
+		this.updateDisplayCanvas();
 		return this;
 	};
 	
@@ -335,6 +487,7 @@ TeledrawCanvas = (function () {
 	// sets the ImageData of the canvas
 	TeledrawCanvas.prototype.putImageData = function (data) {
 		this.ctx().putImageData(data, 0, 0);
+		this.updateDisplayCanvas();
 		return this;
 	};
 	
@@ -352,10 +505,9 @@ TeledrawCanvas = (function () {
 		return this;
 	};
 	
-	// sets the current alpha to a, where a is a number in [0, 255]
+	// sets the current alpha to a, where a is a number in [0,1]
 	TeledrawCanvas.prototype.setAlpha = function (a) {
-		this.state.globalAlpha = TeledrawCanvas.util.clamp(a, 0, 255);
-		this._updateTool();
+		this.state.globalAlpha = TeledrawCanvas.util.clamp(a, 0, 1);
 		return this;
 	};
 	
@@ -408,31 +560,41 @@ TeledrawCanvas = (function () {
 		return this;
 	};
 	
-	// resize the canvas to the given width and height, with the current image duplicated and stretched to the new size
+	// resize the display canvas to the given width and height
+	// (throws an error if it's not the same aspect ratio as the source canvas)
+	// @todo/consider: release this constraint and just change the size of the source canvas?
 	TeledrawCanvas.prototype.resize = function (w, h) {
 		var tmpcanvas = $(this._canvas).clone().get(0);
 		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
 		this._canvas.width = w;
 		this._canvas.height = h;
 		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
+		this.updateDisplayCanvas();
 		return this;
 	};
 	
 	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
 	// optionally at a given point (otherwise in the center of the current display)
-	TeledrawCanvas.prototype.zoom = function (z, pt) {
+	TeledrawCanvas.prototype.zoom = function (z, x, y) {
 		var panx = 0, 
 			pany = 0,
 			currentZoom = this.state.currentZoom,
 			displayWidth = this._displayCanvas.width,
-			displayHeight = this._displayCanvas.height,
-			pt = pt || { xd: displayWidth/2, yd: displayHeight/2};
-		z = TeledrawCanvas.util.clamp(z || 0, displayWidth / this._canvas.width, 4);
+			displayHeight = this._displayCanvas.height;
+			
+		// if no point is specified, use the center of the canvas
+		x = TeledrawCanvas.util.clamp(x || displayWidth/2, 0, displayWidth);
+		y = TeledrawCanvas.util.clamp(y || displayHeight/2, 0, displayHeight);
+		
+		// restrict the zoom
+		z = TeledrawCanvas.util.clamp(z || 0, displayWidth / this._canvas.width, this.state.maxZoom);
 		if (z !== currentZoom) {
 			if (z > currentZoom) {
-				panx = -(displayWidth/currentZoom - displayWidth/z + (pt.xd - displayWidth/2)/currentZoom)/2;
-				pany = -(displayHeight/currentZoom - displayHeight/z + (pt.yd - displayHeight/2)/currentZoom)/2;
+				// zooming in
+				panx = -(displayWidth/currentZoom - displayWidth/z)/2 - (x - displayWidth/2)/currentZoom;
+				pany = -(displayHeight/currentZoom - displayHeight/z)/2 - (y - displayHeight/2)/currentZoom;
 			} else if (z < currentZoom) {
+				// zooming out
 				panx = (displayWidth/z - displayWidth/currentZoom)/2;
 				pany = (displayHeight/z - displayHeight/currentZoom)/2;
 			}
@@ -440,6 +602,7 @@ TeledrawCanvas = (function () {
 			pany *= z;
 		}
 		//console.log(panx, pany);
+		this.trigger('zoom', z);
 		this.state.currentZoom = z;
 		this.pan(panx, pany);
 		this.updateDisplayCanvas();
@@ -460,6 +623,9 @@ TeledrawCanvas = (function () {
 		};
 		this.updateDisplayCanvas();
 	};
+	
+	// events mixin
+	$.extend(TeledrawCanvas.prototype, Events);
 	
 	return TeledrawCanvas;
 })();/**
@@ -526,12 +692,16 @@ TeledrawCanvas = (function () {
 	};
 
 	Snapshot.prototype.restore = function (stroke) {
+		var tl, br;
 		if (stroke) {
-			this._restoreBufferCanvas(stroke.tl, stroke.br);
+			tl = stroke.tl;
+			br = stroke.br;
 		} else {
-			this._restoreBufferCanvas({ x:0, y:0 }, { x:this.canvas.canvas().width, y:this.canvas.canvas().height });
+			tl = { x:0, y:0 };
+			br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
 		}
-		this.canvas.updateDisplayCanvas();
+		this._restoreBufferCanvas(tl, br);
+		this.canvas.updateDisplayCanvas(tl, br);
 	};
 	
 	Snapshot.prototype.toDataURL = function () {
@@ -598,10 +768,14 @@ TeledrawCanvas = (function () {
 
 	Tool.prototype.down = function (pt) {};
 	Tool.prototype.up = function (pt) {};
-	Tool.prototype.dblclick = function (pt) {};
-	Tool.prototype.move = function (mdown, pt_from, pt_to) {};
-	Tool.prototype.enter = function (mdown, pt) {};
-	Tool.prototype.leave = function (mdown, pt) {};
+	Tool.prototype.move = function (mouseDown, from, to) {};
+	Tool.prototype.enter = function (mouseDown, pt) {};
+	Tool.prototype.leave = function (mouseDown, pt) {};
+	Tool.prototype.keydown = function (mdown, key) {};
+	Tool.prototype.keyup = function (mdown, key) {};
+	Tool.prototype.preview = function () {};
+	Tool.prototype.alt_down = function () {};
+	Tool.prototype.alt_up = function () {};
 	
 	// A factory for creating tools
 	Tool.createTool = function (name, cursor, ctor) {
@@ -657,30 +831,32 @@ TeledrawCanvas = (function () {
 	        	this.currentStroke = null;
 	            this.canvas.history.checkpoint();
 	        }
+	        this.canvas.trigger('tool.end');
 	    };
 	    
 	    tool.prototype.draw = function () {
 	    	this.currentStroke.ctx.save();
 	    	this.currentStroke.restore();
 	    	this.currentStroke.draw();
-			this.canvas.updateDisplayCanvas();
+			this.canvas.updateDisplayCanvas(this.currentStroke.tl, this.currentStroke.br);
 	    	this.currentStroke.ctx.restore();
 	    };
 	    
 	    tool.prototype._updateBoundaries = function (pt) {
 	    	var stroke = this.currentStroke,
-	    		canvas = stroke.ctx.canvas;
-	    	if (pt.x < stroke.tl.x) {
-	    		stroke.tl.x = TeledrawCanvas.util.clamp(pt.x - 50, 0, canvas.width);
+	    		canvas = stroke.ctx.canvas,
+	    		strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
+	    	if (pt.x - strokeSize < stroke.tl.x) {
+	    		stroke.tl.x = TeledrawCanvas.util.clamp(Math.floor(pt.x - strokeSize), 0, canvas.width);
 	    	}
-	    	if (pt.x > stroke.br.x) {
-	    		stroke.br.x = TeledrawCanvas.util.clamp(pt.x + 50, 0, canvas.width);
+	    	if (pt.x + strokeSize > stroke.br.x) {
+	    		stroke.br.x = TeledrawCanvas.util.clamp(Math.floor(pt.x + strokeSize), 0, canvas.width);
 	    	}
-	    	if (pt.y < stroke.tl.y) {
-	    		stroke.tl.y = TeledrawCanvas.util.clamp(pt.y - 50, 0, canvas.height);
+	    	if (pt.y - strokeSize < stroke.tl.y) {
+	    		stroke.tl.y = TeledrawCanvas.util.clamp(Math.floor(pt.y - strokeSize), 0, canvas.height);
 	    	}
-	    	if (pt.y > stroke.br.y) {
-	    		stroke.br.y = TeledrawCanvas.util.clamp(pt.y + 50, 0, canvas.height);
+	    	if (pt.y + strokeSize > stroke.br.y) {
+	    		stroke.br.y = TeledrawCanvas.util.clamp(Math.floor(pt.y + strokeSize), 0, canvas.height);
 	    	}
 	    };
 	    
@@ -699,24 +875,27 @@ TeledrawCanvas = (function () {
  */
 (function (TeledrawCanvas) {
 	var Util = function () { return Util; };
-	var floor = Math.floor,
+	var floor = Math.floor
+		round = Math.round,
 		min = Math.min,
 		max = Math.max;
 	
+	// returns a CSS-style rgb(a) string for the given RGBA array
 	Util.cssColor = function (rgba) {
 	    if (rgba.length == 3) {
 	        return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
 	    }
-	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (floor(rgba[3]) / 0xFF) + ")";
+	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + (round(rgba[3]*100)/100) + ")";
 	};
 	
+	// constrains c within a and b
 	Util.clamp = function (c, a, b) {
 		return (c < a ? a : c > b ? b : c);
 	};
 	
 	Util.opposite = function (color) {
 		if (!$.isArray(color)) {
-			color = TeledrawCanvas.util.parseColorString(color);
+			color = Util.parseColorString(color);
 		}
 		var hsl = Util.rgb2hsl(color);
 		hsl[0] = (hsl[0] + 180) % 360;
@@ -733,7 +912,7 @@ TeledrawCanvas = (function () {
 		var r = rgba[0],
 			g = rgba[1],
 			b = rgba[2],
-			a = rgba[3]/255,
+			a = rgba[3],
 			out = [];
 		out[0] = (a * r) + (255 - a*255);
 		out[1] = (a * g) + (255 - a*255);
@@ -1010,7 +1189,7 @@ TeledrawCanvas = (function () {
 				parseInt(bits[1]),
 				parseInt(bits[2]),
 				parseInt(bits[3]),
-				255
+				1
 				];
 			}
 		},
@@ -1022,7 +1201,7 @@ TeledrawCanvas = (function () {
 				parseInt(bits[1]),
 				parseInt(bits[2]),
 				parseInt(bits[3]),
-				parseFloat(bits[4]) * 0xFF
+				parseFloat(bits[4])
 				];
 			}
 		},
@@ -1031,7 +1210,7 @@ TeledrawCanvas = (function () {
 			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
 			process: function (bits){
 				var rgba = Util.hsl2rgb(bits.slice(1, 4));
-				rgba.push(255);
+				rgba.push(1);
 				return rgba;
 			}
 		},
@@ -1040,7 +1219,7 @@ TeledrawCanvas = (function () {
 			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
 			process: function (bits){
 				var rgba = Util.hsl2rgb(bits.slice(1, 4));
-				rgba.push(parseFloat(bits[4]) * 0xFF);
+				rgba.push(parseFloat(bits[4]));
 				return rgba;
 			}
 		},
@@ -1052,7 +1231,7 @@ TeledrawCanvas = (function () {
 				parseInt(bits[1], 16),
 				parseInt(bits[2], 16),
 				parseInt(bits[3], 16),
-				255
+				1
 				];
 			}
 		},
@@ -1064,7 +1243,7 @@ TeledrawCanvas = (function () {
 				parseInt(bits[1] + bits[1], 16),
 				parseInt(bits[2] + bits[2], 16),
 				parseInt(bits[3] + bits[3], 16),
-				255
+				1
 				];
 			}
 		}
@@ -1090,8 +1269,8 @@ TeledrawCanvas = (function () {
 		r = (r < 0 || isNaN(r)) ? 0 : ((r > 255) ? 255 : r);
 		g = (g < 0 || isNaN(g)) ? 0 : ((g > 255) ? 255 : g);
 		b = (b < 0 || isNaN(b)) ? 0 : ((b > 255) ? 255 : b);
-		a = (a < 0 || isNaN(a)) ? 0 : ((a > 255) ? 255 : a);
-		return ok ? [r, g, b, a] : [0, 0, 0, 255];
+		a = (a < 0 || isNaN(a)) ? 0 : ((a > 1) ? 1 : a);
+		return ok ? [r, g, b, a] : [0, 0, 0, 1];
 	}
 	
 	TeledrawCanvas.util = Util;
@@ -1396,7 +1575,7 @@ TeledrawCanvas = (function () {
 	Grab.prototype.dblclick = function (pt) {
 		cancelAnimationFrame(this._momentumId);
 	    this.dx = this.dy = 0;
-	    this.canvas.zoom(this.canvas.state.currentZoom*2, pt);
+	    this.canvas.zoom(this.canvas.state.currentZoom*2, pt.xd, pt.yd);
 	};
 	
 	Grab.prototype.momentum = function (dx, dy) {
