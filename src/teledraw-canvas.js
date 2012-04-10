@@ -439,7 +439,7 @@ TeledrawCanvas = (function () {
 			panx *= z;
 			pany *= z;
 		}
-		console.log(panx, pany);
+		//console.log(panx, pany);
 		this.state.currentZoom = z;
 		this.pan(panx, pany);
 		this.updateDisplayCanvas();

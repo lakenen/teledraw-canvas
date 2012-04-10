@@ -14,6 +14,7 @@
 		
 	</style>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+	<script type="text/javascript" src="jquery.mousewheel.js"></script>
 	<script type="text/javascript" src="teledraw-canvas.js"></script>
 	<script type="text/javascript">
 		var c;
@@ -21,6 +22,10 @@
 			c = new TeledrawCanvas('#test-canvas', {
 				fullWidth: 1600,
 				fullHeight: 1200
+			});
+			$('#container').bind('mousewheel', function (e, d, dx, dy) {
+				c.pan(dx*2, dy*2);
+				e.preventDefault();
 			});
 		});
 	</script>

@@ -439,7 +439,7 @@ TeledrawCanvas = (function () {
 			panx *= z;
 			pany *= z;
 		}
-		console.log(panx, pany);
+		//console.log(panx, pany);
 		this.state.currentZoom = z;
 		this.pan(panx, pany);
 		this.updateDisplayCanvas();
@@ -1396,12 +1396,12 @@ TeledrawCanvas = (function () {
 	Grab.prototype.dblclick = function (pt) {
 		cancelAnimationFrame(this._momentumId);
 	    this.dx = this.dy = 0;
-	    this.canvas.zoom(this.canvas.state.currentZoom + 0.5, pt);
+	    this.canvas.zoom(this.canvas.state.currentZoom*2, pt);
 	};
 	
 	Grab.prototype.momentum = function (dx, dy) {
 		var self = this;
-		if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+		if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
 			dx /= 1.1;
 			dy /= 1.1;
 	    	this.canvas.pan(dx, dy);
