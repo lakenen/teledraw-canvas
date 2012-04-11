@@ -17,15 +17,25 @@
 	var EyeDropper = TeledrawCanvas.Tool.createTool("eyedropper", "crosshair", ctor);
 	
 	EyeDropper.prototype.pick = function (pt) {
-		var off = $(this.canvas.canvas()).offset();
-		this.previewContainer.offset({ left: off.left + pt.x + 15, top: off.top + pt.y + 5 });
-		var pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
+		var previewContainer = this.previewContainer,
+			lightness,
+			off = this.canvas.element.offset(),
+			pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
 		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
-		var l = TeledrawCanvas.util.rgb2hsl(this.color)[2];
-		this.previewContainer.css({
-			'background-color': TeledrawCanvas.util.cssColor(this.color),
-			'border-color': l >= 50 ? '#000' : '#888'
+		this.previewContainer.offset({ left: off.left + pt.xd + 15, top: off.top + pt.yd + 5});
+		var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
+		previewContainer.css({
+			'background': TeledrawCanvas.util.cssColor(this.color),
+			'border-color': lightness >= 50 ? '#000' : '#888'
 		});
+		if (this.canvas.state.mouseOver) {
+			// hack for chrome, since it seems to ignore this and not redraw for some reason...
+			previewContainer[0].style.display='none';
+			previewContainer[0].offsetHeight; // no need to store this anywhere, the reference is enough
+			previewContainer[0].style.display='block';
+		} else {
+			previewContainer.hide();
+		}
 	};
 
 	EyeDropper.prototype.enter = function () {

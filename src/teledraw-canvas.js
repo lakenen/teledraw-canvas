@@ -109,7 +109,7 @@ TeledrawCanvas = (function () {
 		this.history.checkpoint();
 		_canvases[_id++] = this;
 		var gInitZoom;
-		container
+		element.css({ width: state.width, height: state.height })
 			.bind('gesturestart', function (evt) {
 	    		if (state.tool.name == 'grab') {
 					gInitZoom = state.currentZoom;
@@ -287,8 +287,8 @@ TeledrawCanvas = (function () {
 	    var cursors = c.split(/,\s*/);
 	    do {
 	    	c = cursors.shift();
-	    	this.container.css('cursor', c);
-	    } while (c.length && this.container.css('cursor') != c);
+	    	this.element.css('cursor', c);
+	    } while (c.length && this.element.css('cursor') != c);
 	    return this;
 	};
 	
@@ -449,7 +449,8 @@ TeledrawCanvas = (function () {
 	};
 	
 	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
-	// optionally at a given point (otherwise in the center of the current display)
+	// optionally at a given point (in display canvas coordinates)
+	// otherwise in the center of the current display
 	TeledrawCanvas.prototype.zoom = function (z, x, y) {
 		var panx = 0, 
 			pany = 0,
@@ -477,8 +478,8 @@ TeledrawCanvas = (function () {
 			pany *= z;
 		}
 		//console.log(panx, pany);
-		this.trigger('zoom', z);
 		this.state.currentZoom = z;
+		this.trigger('zoom', z, currentZoom);
 		this.pan(panx, pany);
 		this.updateDisplayCanvas();
 	};
@@ -496,6 +497,7 @@ TeledrawCanvas = (function () {
 			x: floor(TeledrawCanvas.util.clamp(x, 0, maxWidth)),
 			y: floor(TeledrawCanvas.util.clamp(y, 0, maxHeight))
 		};
+		this.trigger('pan', x, y);
 		this.updateDisplayCanvas();
 	};
 	

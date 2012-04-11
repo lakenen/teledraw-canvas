@@ -3,8 +3,9 @@
  */
 (function (TeledrawCanvas) {
 	var Fill = TeledrawCanvas.Tool.createTool("fill", "crosshair");
-
-	Fill.tolerance = 30;
+	var abs = Math.abs;
+	
+	Fill.blur = true;
 	Fill.stroke.prototype.bgColor = [255, 255, 255];
 	Fill.stroke.prototype.bgAlpha = 255;
 
@@ -12,79 +13,104 @@
 		var w = this.ctx.canvas.width, h = this.ctx.canvas.height;
 		var pixels = this.ctx.getImageData(0,0, w,h);
 		var fill_mask = this.ctx.createImageData(w,h);
-		var pxd = pixels.data, fmd = fill_mask.data;
-		
-		var tstart = (target.y * w + target.x) * 4;
-		var tR = pxd[tstart],
-			tG = pxd[tstart+1], 
-			tB = pxd[tstart+2], 
-			tA = pxd[tstart+3];
-		
-		var abs = Math.abs;
-		
-		var T = Fill.tolerance;
-		var iT = Math.floor(0xFF / T);
-	
-		var open = [[target.x, target.y]];
-		while (open.length > 0) {
-			var pt = open.shift();
-			var px = pt[0], py = pt[1];
-			if (py < 0 || py > h) continue;
-			if (px < 0 || px > w) continue;
-			var start = (py*w+px)*4;
-	
-			if (fmd[start+3] > 0) continue;
-			
-			var R = pxd[start], 
-				G = pxd[start+1], 
-				B = pxd[start+2], 
-				A = pxd[start+3];
-			var dist =  abs(R - tR) + abs(G - tG) + abs(B - tB) + abs(A - tA);
-		
-			if (dist < T) {
-				fmd[start+3] = 0xFF - dist*iT;
-				
-				if (px > 0) open.push([px - 1, py, px - 2, py]);
-				if (px <= w-1) open.push([px + 1, py, px + 2, py]);
-				if (py > 0) open.push([px, py - 1, px, py - 2]);
-				if (py <= h-1) open.push([px, py + 1, px, py + 2]);
-			}
-		}
-		
-		var rc = this.color;
-		var new_pixels = this.ctx.createImageData(w,h);
-		var dpd = new_pixels.data;
-		var alpha = Math.floor(this.canvas.getAlpha());
-		for (var i = 0; i < fill_mask.data.length; i += 4) {
-			if (fmd[i+3] > 0x00) {
-				dpd[i] = rc[0];
-				dpd[i+1] = rc[1];
-				dpd[i+2] = rc[2];
-				dpd[i+3] = Math.floor(rc[3] * fmd[i+3] / 0xFF);
-			}
-		}
+		var color = this.color;
+		color[3]*=0xFF;
+		floodFillScanlineStack(pixels.data, fill_mask.data, target, w, h, this.color);
 		this.tmp_canvas = $('<canvas>').attr({width: w, height: h}).get(0);
 		var tmp_ctx = this.tmp_canvas.getContext('2d');
-		tmp_ctx.putImageData(new_pixels, 0,0);
+		tmp_ctx.putImageData(fill_mask, 0, 0);
 		
-		/*stackBlurCanvasRGBA(this.tmp_canvas, 1);
-		
-		var tmp_data = tmp_ctx.getImageData(0, 0, w, h);
-		for (var i = 0, l = tmp_data.data.length; i < l; i += 4) {
-			if (tmp_data.data[i+3] > 0x20) {
-				tmp_data.data[i] = rc[0];
-				tmp_data.data[i+1] = rc[1];
-				tmp_data.data[i+2] = rc[2];
-				tmp_data.data[i+3] = Math.min(rc[3], tmp_data.data[i+3] * 4);
+		if (Fill.blur) {
+			stackBlurCanvasRGBA(this.tmp_canvas, 1);
+			var tmp_data = tmp_ctx.getImageData(0, 0, w, h);
+			for (var i = 0, l = tmp_data.data.length; i < l; i += 4) {
+				if (tmp_data.data[i+3]/0xFF > 0.2) {
+					tmp_data.data[i] = color[0];
+					tmp_data.data[i+1] = color[1];
+					tmp_data.data[i+2] = color[2];
+					tmp_data.data[i+3] = Math.min(color[3], tmp_data.data[i+3] * 3);
+				}
 			}
+			tmp_ctx.putImageData(tmp_data, 0, 0);
 		}
-		tmp_ctx.putImageData(tmp_data, 0, 0);*/
 	};
 
 	Fill.stroke.prototype.draw = function () {
 		if (this.tmp_canvas) {
-        	this.ctx.drawImage(this.tmp_canvas, 0,0);
+        	this.ctx.drawImage(this.tmp_canvas, 0, 0);
     	}
 	};
+	
+	function floodFillScanlineStack(dataFrom, dataTo, target, w, h, newColor) {
+		var stack = [[target.x, target.y]];
+		var oldColor = getColor(dataFrom, target.x, target.y, w);
+		var tolerance = Fill.tolerance;
+		var spanLeft, spanRight;
+		var color, dist, pt, x, y, y1;
+		var oppColor = TeledrawCanvas.util.opposite(oldColor);
+		oppColor[3]/=2;
+		while (stack.length) {
+			pt = stack.pop();
+			x = pt[0];
+			y1 = y = pt[1];
+        	while (y1 >= 0 && colorsEqual(getColor(dataFrom, x, y1, w), oldColor)) y1--;
+			y1++;
+			spanLeft = spanRight = false;
+			
+			while(y1 < h && colorsEqual(getColor(dataFrom, x, y1, w), oldColor))
+        	{
+				setColor(dataFrom, x, y1, w, oppColor);
+				setColor(dataTo, x, y1, w, newColor);
+				if (!spanLeft && x > 0 && colorsEqual(getColor(dataFrom, x - 1, y1, w), oldColor)) 
+				{
+					stack.push([x - 1, y1]);
+					spanLeft = true;
+				}
+				else if (spanLeft && x > 0 && colorsEqual(getColor(dataFrom, x - 1, y1, w), oldColor))
+				{
+					spanLeft = false;
+				}
+				if (!spanRight && x < w - 1 && colorsEqual(getColor(dataFrom, x + 1, y1, w), oldColor))
+				{
+					stack.push([x + 1, y1]);
+					spanRight = true;
+				}
+				else if (spanRight && x < w - 1 && colorsEqual(getColor(dataFrom, x + 1, y1, w), oldColor))
+				{
+					spanRight = false;
+				} 
+				y1++;
+			}
+		}
+	}
+	
+	function getColor(data, x, y, w) {
+		var start = (y * w + x) * 4;
+		return [
+			data[start],
+			data[start+1], 
+			data[start+2], 
+			data[start+3]
+		];
+	}
+	
+	function setColor(data, x, y, w, color) {
+		var start = (y * w + x) * 4;
+		data[start] = color[0];
+		data[start+1] = color[1];
+		data[start+2] = color[2];
+		data[start+3] = color[3];
+	}
+	
+	function colorDistance(col1, col2) {
+		return abs(col1[0] - col2[0]) + 
+				abs(col1[1] - col2[1]) + 
+				abs(col1[2] - col2[2]) + 
+				abs(col1[3] - col2[3]);
+	}
+	
+	function colorsEqual(col1, col2) {
+		return colorDistance(col1, col2) < 5;
+	}
 })(TeledrawCanvas);
 

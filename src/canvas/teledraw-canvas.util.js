@@ -29,7 +29,11 @@
 		hsl[0] = (hsl[0] + 180) % 360;
 		hsl[1] = 100 - hsl[1];
 		hsl[2] = 100 - hsl[2];
-		return Util.hsl2rgb(hsl);
+		var rgb = Util.hsl2rgb(hsl);
+		if (color.length === 4) {
+			rgb.push(color[3]);
+		}
+		return rgb;
 	};
 	
 	// kill the alpha channel!

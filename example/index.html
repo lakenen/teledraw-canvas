@@ -12,6 +12,11 @@
 			background-color: white;
 		}
 		
+		#preview-canvas {
+			width: 100px;
+			height: 100px;
+		}
+		
 	</style>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 	<script type="text/javascript" src="jquery.mousewheel.js"></script>
@@ -20,7 +25,8 @@
 		var c;
 		$(function () {
 		
-			var grid = createGrid(2048, 512);
+			var grid = createGrid(1024, 512),
+				previewgrid =createGrid(1024, 512, 0.3);
 			c = new TeledrawCanvas('#test-canvas', {
 				fullWidth: 1024,
 				fullHeight: 1024
@@ -43,21 +49,19 @@
 				}
 			});
 			c.on('zoom', function (newZoom) {
-				grid = createGrid(2048, 512, newZoom);
+				grid = createGrid(1024, 512, newZoom);
 			});
-			var previewctx = $('#preview-canvas').get(0).getContext('2d');
-			c.on('tool.up', function () {
-				previewctx.clearRect(0,0,previewctx.canvas.width, previewctx.canvas.height);
-				previewctx.drawImage(this.canvas(), 0, 0, previewctx.canvas.width, previewctx.canvas.height);
-				if (grid) previewctx.drawImage(createGrid(2048, 512, 0.2), 0, 0, previewctx.canvas.width, previewctx.canvas.height);
-			});
+			var previewctx = $('#preview-canvas').get(0).getContext('2d'),
+				tmppreview = $('#preview-canvas').clone().get(0)
+				tmppreviewctx = tmppreview.getContext('2d');
+			c.on('tool.up zoom pan', redrawPreview);
 			c.zoom(0);
 			function createGrid(fullSize, tileSize, zoom) {
 				var grid = $('<canvas>').attr({width: fullSize, height: fullSize}).get(0);
 				var ctx = grid.getContext('2d');
 				var t = fullSize/tileSize; // how big the grid is on each side, number of tiles
 				if (t > 1) {
-					ctx.lineWidth = Math.ceil(3/zoom);
+					ctx.lineWidth = 3/zoom;
 					ctx.strokeStyle="#aaa";
 					for (var i = 1; i < t; ++i) {
 						ctx.moveTo(i*tileSize, 0);
@@ -70,8 +74,32 @@
 				}
 				return null;
 			}
+			function redrawPreview() {
+				var off = this.state.currentOffset,
+					zoom = this.state.currentZoom,
+					wm = previewctx.canvas.width/this._canvas.width,
+					hm = previewctx.canvas.height/this._canvas.height,
+					x = off.x*wm,
+					y = off.y*hm,
+					w = this._displayCanvas.width/zoom*wm,
+					h = this._displayCanvas.height/zoom*hm;
+				previewctx.clearRect(0,0,previewctx.canvas.width, previewctx.canvas.height);
+				previewctx.drawImage(this.canvas(), 0, 0, previewctx.canvas.width, previewctx.canvas.height);
+				tmppreviewctx.clearRect(0,0,previewctx.canvas.width, previewctx.canvas.height);
+				tmppreviewctx.fillStyle = 'black';
+				tmppreviewctx.globalAlpha = 0.5;
+				tmppreviewctx.fillRect(0,0,previewctx.canvas.width, previewctx.canvas.height);
+				tmppreviewctx.clearRect(x, y, w, h);
+				previewctx.drawImage(tmppreview, 0, 0);
+				if (grid) {
+					previewctx.save();
+					previewctx.globalAlpha = 0.5;
+					previewctx.drawImage(previewgrid, 0, 0, previewctx.canvas.width, previewctx.canvas.height);
+					previewctx.restore();
+				}
+			}
 			
-			$('#container').bind('mousewheel', function (e, d, dx, dy) {
+			$('#test-canvas').bind('mousewheel', function (e, d, dx, dy) {
 				c.pan(-dx*10, dy*10);
 				e.preventDefault();
 			});
@@ -81,9 +109,9 @@
 </head>
 <body>
 	<h1>Teledraw Canvas Example</h1>
-	<div id="container">
-		<canvas id="test-canvas" width="512" height="512">Oh crap... your browser doesn't support canvas!</canvas>
-	</div>
+	<canvas id="test-canvas" width="512" height="512">Oh crap... your browser doesn't support canvas!</canvas>
+	<canvas id="preview-canvas" width="512" height="512"></canvas>
+	<br/>
 	<button onclick="c.setTool('pencil')">pencil</button>
 	<button onclick="c.setTool('eraser')">eraser</button>
 	<button onclick="c.setTool('grab')">pan</button>
@@ -99,6 +127,5 @@
 	<button onclick="c.redo()">redo</button>
 	<button onclick="c.zoom(c.state.currentZoom*2)">zoom (+)</button>
 	<button onclick="c.zoom(c.state.currentZoom/2)">zoom (-)</button>
-	<canvas id="preview-canvas" width="128" height="128"></canvas>
 </body>
 </html>
