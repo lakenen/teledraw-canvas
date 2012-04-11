@@ -7,6 +7,7 @@
 	Tool.prototype.down = function (pt) {};
 	Tool.prototype.up = function (pt) {};
 	Tool.prototype.move = function (mouseDown, from, to) {};
+	Tool.prototype.dblclick = function (pt) {};
 	Tool.prototype.enter = function (mouseDown, pt) {};
 	Tool.prototype.leave = function (mouseDown, pt) {};
 	Tool.prototype.keydown = function (mdown, key) {};
@@ -69,7 +70,7 @@
 	        	this.currentStroke = null;
 	            this.canvas.history.checkpoint();
 	        }
-	        this.canvas.trigger('tool.end');
+	        this.canvas.trigger('tool.up');
 	    };
 	    
 	    tool.prototype.draw = function () {

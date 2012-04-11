@@ -22,8 +22,8 @@
 		
 			var grid = createGrid(2048, 512);
 			c = new TeledrawCanvas('#test-canvas', {
-				fullWidth: 1024*2,
-				fullHeight: 1024*2
+				fullWidth: 1024,
+				fullHeight: 1024
 			});
 			c.on('display.update:after', function () {
 				// draw gridlines
@@ -46,7 +46,7 @@
 				grid = createGrid(2048, 512, newZoom);
 			});
 			var previewctx = $('#preview-canvas').get(0).getContext('2d');
-			c.on('tool.end', function () {
+			c.on('tool.up', function () {
 				previewctx.clearRect(0,0,previewctx.canvas.width, previewctx.canvas.height);
 				previewctx.drawImage(this.canvas(), 0, 0, previewctx.canvas.width, previewctx.canvas.height);
 				if (grid) previewctx.drawImage(createGrid(2048, 512, 0.2), 0, 0, previewctx.canvas.width, previewctx.canvas.height);

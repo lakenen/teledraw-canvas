@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.6.0 (http://semver.org/)
+	Version 0.6.1 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -439,11 +439,11 @@ TeledrawCanvas = (function () {
 	// (throws an error if it's not the same aspect ratio as the source canvas)
 	// @todo/consider: release this constraint and just change the size of the source canvas?
 	TeledrawCanvas.prototype.resize = function (w, h) {
-		var tmpcanvas = $(this._canvas).clone().get(0);
-		tmpcanvas.getContext('2d').drawImage(this._canvas,0,0);
-		this._canvas.width = w;
-		this._canvas.height = h;
-		this.ctx().drawImage(tmpcanvas, 0, 0, tmpcanvas.width, tmpcanvas.height, 0, 0, w, h);
+		if (w/h !== this._canvas.width/this._canvas.height) {
+			throw new Error('Not the same aspect ratio!');
+		}
+		this._displayCanvas.width = w;
+		this._displayCanvas.height = h;
 		this.updateDisplayCanvas();
 		return this;
 	};
