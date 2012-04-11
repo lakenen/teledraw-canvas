@@ -9,7 +9,19 @@
 	Fill.stroke.prototype.bgColor = [255, 255, 255];
 	Fill.stroke.prototype.bgAlpha = 255;
 
+
 	Fill.stroke.prototype.end = function (target) {
+		var canvas = this.canvas;
+		this.cover = $('<div>').css({
+			position: 'absolute',
+			background: 'rgba(0,0,0,0.7)',
+			lineHeight: canvas.element.height(),
+			height: canvas.element.height(),
+			width: canvas.element.width(),
+			top: canvas.element.position().top,
+			left: canvas.element.position().left
+		});
+		canvas.element.after(this.cover.html('Processing...'));
 		var w = this.ctx.canvas.width, h = this.ctx.canvas.height;
 		var pixels = this.ctx.getImageData(0,0, w,h);
 		var fill_mask = this.ctx.createImageData(w,h);
@@ -38,6 +50,7 @@
 	Fill.stroke.prototype.draw = function () {
 		if (this.tmp_canvas) {
         	this.ctx.drawImage(this.tmp_canvas, 0, 0);
+		this.cover.remove();
     	}
 	};
 	

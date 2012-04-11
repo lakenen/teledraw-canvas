@@ -480,7 +480,7 @@ Events = (function () {
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.6.1 (http://semver.org/)
+	Version 0.6.2 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -536,7 +536,8 @@ TeledrawCanvas = (function () {
 		currentOffset: { x: 0, y: 0 },
 		
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
-		shadowOffset: 2000,
+		// related note: safari has trouble with high values for shadowOffset
+		shadowOffset: 5000,
 		
 		// default limits
 		maxHistory: 10,
@@ -562,8 +563,10 @@ TeledrawCanvas = (function () {
 		state.fullWidth = state.fullWidth || state.width;
 		state.fullHeight = state.fullHeight || state.height;
 		
-		if (state.width / state.fullWidth !== state.height / state.fullHeight) {
-			throw new Error('Display and full canvas aspect ratios differ!');
+		if (state.width / state.height !== state.fullWidth / state.fullHeight) {
+			//Display and full canvas aspect ratios differ!
+			//Adjusting full size to match display aspect ratio...
+			state.fullHeight = state.fullWidth * state.height / state.width;
 		}
 		
 		element.attr({
@@ -708,7 +711,21 @@ TeledrawCanvas = (function () {
 		this.state.shadowBlur = sb;
 	};
 	
-	/*
+	TeledrawCanvas.prototype.updateDisplayCanvas = function () {
+		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+			off = this.state.currentOffset,
+			zoom = this.state.currentZoom, 
+			dw = dctx.canvas.width,
+			dh = dctx.canvas.height,
+			sw = dw / zoom,
+			sh = dh / zoom;
+		dctx.clearRect(0, 0, dw, dh);
+		this.trigger('display.update:before');
+		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
+		this.trigger('display.update:after');
+	};
+	
+	/* this version attempts at better performance, but I don't think it is actually significantly better.
 	TeledrawCanvas.prototype.updateDisplayCanvas = function (tl, br) {
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
@@ -730,20 +747,6 @@ TeledrawCanvas = (function () {
 		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
 	};
 	*/
-	
-	TeledrawCanvas.prototype.updateDisplayCanvas = function () {
-		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
-			off = this.state.currentOffset,
-			zoom = this.state.currentZoom, 
-			dw = dctx.canvas.width,
-			dh = dctx.canvas.height,
-			sw = dw / zoom,
-			sh = dh / zoom;
-		dctx.clearRect(0, 0, dw, dh);
-		this.trigger('display.update:before');
-		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
-		this.trigger('display.update:after');
-	};
 	
 	
 	// API
@@ -1829,7 +1832,19 @@ TeledrawCanvas = (function () {
 	Fill.stroke.prototype.bgColor = [255, 255, 255];
 	Fill.stroke.prototype.bgAlpha = 255;
 
+
 	Fill.stroke.prototype.end = function (target) {
+		var canvas = this.canvas;
+		this.cover = $('<div>').css({
+			position: 'absolute',
+			background: 'rgba(0,0,0,0.7)',
+			lineHeight: canvas.element.height(),
+			height: canvas.element.height(),
+			width: canvas.element.width(),
+			top: canvas.element.position().top,
+			left: canvas.element.position().left
+		});
+		canvas.element.after(this.cover.html('Processing...'));
 		var w = this.ctx.canvas.width, h = this.ctx.canvas.height;
 		var pixels = this.ctx.getImageData(0,0, w,h);
 		var fill_mask = this.ctx.createImageData(w,h);
@@ -1858,6 +1873,7 @@ TeledrawCanvas = (function () {
 	Fill.stroke.prototype.draw = function () {
 		if (this.tmp_canvas) {
         	this.ctx.drawImage(this.tmp_canvas, 0, 0);
+		this.cover.remove();
     	}
 	};
 	
