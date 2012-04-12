@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.6.2 (http://semver.org/)
+	Version 0.6.3 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -488,14 +488,15 @@ TeledrawCanvas = (function () {
 	};
 	
 	// pan the canvas to the given (relative) x,y position
-	TeledrawCanvas.prototype.pan = function (x, y) {
+	// unless absolute === true
+	TeledrawCanvas.prototype.pan = function (x, y, absolute) {
 		var zoom = this.state.currentZoom,
 			currentX = this.state.currentOffset.x,
 			currentY = this.state.currentOffset.y,
 			maxWidth = this._canvas.width - this._displayCanvas.width/zoom,
 			maxHeight = this._canvas.height - this._displayCanvas.height/zoom;
-		x = currentX - (x || 0)/zoom;
-		y = currentY - (y || 0)/zoom;
+		x = absolute === true ? x/zoom : currentX - (x || 0)/zoom;
+		y = absolute === true ? y/zoom : currentY - (y || 0)/zoom;
 		this.state.currentOffset = {
 			x: floor(TeledrawCanvas.util.clamp(x, 0, maxWidth)),
 			y: floor(TeledrawCanvas.util.clamp(y, 0, maxHeight))
