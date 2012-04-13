@@ -86,16 +86,16 @@
 	    		canvas = stroke.ctx.canvas,
 	    		strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
 	    	if (pt.x - strokeSize < stroke.tl.x) {
-	    		stroke.tl.x = TeledrawCanvas.util.clamp(Math.floor(pt.x - strokeSize), 0, canvas.width);
+	    		stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
 	    	}
 	    	if (pt.x + strokeSize > stroke.br.x) {
-	    		stroke.br.x = TeledrawCanvas.util.clamp(Math.floor(pt.x + strokeSize), 0, canvas.width);
+	    		stroke.br.x = clamp(floor(pt.x + strokeSize), 0, canvas.width);
 	    	}
 	    	if (pt.y - strokeSize < stroke.tl.y) {
-	    		stroke.tl.y = TeledrawCanvas.util.clamp(Math.floor(pt.y - strokeSize), 0, canvas.height);
+	    		stroke.tl.y = clamp(floor(pt.y - strokeSize), 0, canvas.height);
 	    	}
 	    	if (pt.y + strokeSize > stroke.br.y) {
-	    		stroke.br.y = TeledrawCanvas.util.clamp(Math.floor(pt.y + strokeSize), 0, canvas.height);
+	    		stroke.br.y = clamp(floor(pt.y + strokeSize), 0, canvas.height);
 	    	}
 	    };
 	    
