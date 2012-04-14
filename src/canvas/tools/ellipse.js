@@ -2,11 +2,12 @@
  * Ellipse tool
  */
 (function (TeledrawCanvas) {
-	var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair");
+	var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair"),
+		EllipseStrokePrototype = Ellipse.stroke.prototype;
 
-	Ellipse.stroke.prototype.bgColor = [255, 255, 255];
-	Ellipse.stroke.prototype.bgAlpha = 0;
-	Ellipse.stroke.prototype.lineWidth = 1;
+	EllipseStrokePrototype.bgColor = [255, 255, 255];
+	EllipseStrokePrototype.bgAlpha = 0;
+	EllipseStrokePrototype.lineWidth = 1;
 	
 	/*
 	Ellipse.prototype.keydown = function (mdown, key) {
@@ -28,26 +29,27 @@
 	};
 	*/
 	
-	Ellipse.stroke.prototype.start = function (pt) {
+	EllipseStrokePrototype.start = function (pt) {
 	    this.first = pt;
 	};
 
-	Ellipse.stroke.prototype.move = function (a, b) {
+	EllipseStrokePrototype.move = function (a, b) {
 	    this.second = b;
 	};
 
-	Ellipse.stroke.prototype.end = function (pt) {
+	EllipseStrokePrototype.end = function (pt) {
 	    this.second = pt;
 	};
 
-	Ellipse.stroke.prototype.draw = function () {
+	EllipseStrokePrototype.draw = function () {
 	    if (!this.first || !this.second) return;
-	    var x = this.first.x,
-	    	y = this.first.y,
-	    	w = this.second.x - x,
-	    	h = this.second.y - y,
-	    	ctx = this.ctx,
-	    	state = this.canvas.state,
+	    var self = this,
+	    	x = self.first.x,
+	    	y = self.first.y,
+	    	w = self.second.x - x,
+	    	h = self.second.y - y,
+	    	ctx = self.ctx,
+	    	state = self.canvas.state,
 			shadowOffset = state.shadowOffset,
 			shadowBlur = state.shadowBlur,
 			lineWidth = state.lineWidth,
@@ -58,11 +60,11 @@
 		ctx.fillStyle = ctx.strokeStyle = color;
 		ctx.miterLimit = 100000;
 	    
-	    if (this.tool.shiftKey) {
-	    	h = this.second.y > y ? Math.abs(w) : -Math.abs(w);
+	    if (self.tool.shiftKey) {
+	    	h = self.second.y > y ? abs(w) : -abs(w);
 	    }
 	    
-	    if (this.tool.fill) {
+	    if (self.tool.fill) {
 		    drawEllipse(ctx, x, y, w, h);
 		    ctx.fill();
 	    } else {
