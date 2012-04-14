@@ -55,6 +55,7 @@ TeledrawCanvas = (function () {
 		
 		currentZoom: 1,
 		currentOffset: { x: 0, y: 0 },
+		drawingBounds: null,
 		
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		// related note: safari has trouble with high values for shadowOffset
@@ -94,6 +95,14 @@ TeledrawCanvas = (function () {
 			width: state.width,
 			height: state.height
 		});
+		
+		state.drawingBounds = 
+			state.drawingBounds || 
+			[
+				{x: 0, y: 0}, 
+				{x: state.fullWidth, y: state.fullHeight}
+			];
+		
 		
 		this._displayCanvas = $(element).get(0);
 		
