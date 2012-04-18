@@ -25,7 +25,6 @@
 		
 		currentZoom: 1,
 		currentOffset: { x: 0, y: 0 },
-		drawingBounds: null,
 		
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		// related note: safari has trouble with high values for shadowOffset
@@ -72,12 +71,6 @@
 			height: state.height
 		});
 		
-		state.drawingBounds = 
-			state.drawingBounds || 
-			[
-				{x: 0, y: 0}, 
-				{x: state.fullWidth, y: state.fullHeight}
-			];
 		self._displayCanvas = $(element).get(0);
 		
 		self._canvas = new Canvas(state.fullWidth, state.fullHeight);
@@ -292,16 +285,20 @@
 		return self;
 	};
 	
-	// returns a data url (image/png) of the canvas, optionally scaled to w x h pixels
-	APIprototype.toDataURL = function (w, h) {
+	// returns a data url (image/png) of the canvas,
+	// optionally a portion of the canvas specified by x, y, w, h
+	APIprototype.toDataURL = function (x, y, w, h) {
 		if (w && h) {
 			w = parseInt(w);
 			h = parseInt(h);
+			x = x !== UNDEFINED ? x : 0;
+			y = y !== UNDEFINED ? y : 0;
+			
 			var tmpcanvas = $('<canvas>').attr({
 				width: w,
 				height: h
 			}).get(0);
-			tmpcanvas.getContext('2d').drawImage(this.canvas(), 0, 0, w, h);
+			tmpcanvas.getContext('2d').drawImage(this.canvas(), x, y, w, h, 0, 0, w, h);
 			return tmpcanvas.toDataURL();
 		}
 		return this.canvas().toDataURL();
