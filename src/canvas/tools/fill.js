@@ -17,7 +17,7 @@
 		var color = this.color;
 		color[3]*=0xFF;
 		floodFillScanlineStack(pixels.data, fill_mask.data, target, w, h, this.color);
-		this.tmp_canvas = $('<canvas>').attr({width: w, height: h}).get(0);
+		this.tmp_canvas = this.canvas.getTempCanvas();
 		var tmp_ctx = this.tmp_canvas.getContext('2d');
 		tmp_ctx.putImageData(fill_mask, 0, 0);
 		

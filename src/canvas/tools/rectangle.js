@@ -26,7 +26,7 @@
 	Rectangle.stroke.prototype.draw = function () {
 	    if (!this.first || !this.second) return;
 	    var first = this.first,
-	    	second = $.extend({}, this.second),
+	    	second = _.extend({}, this.second),
 	    	ctx = this.ctx,
 	    	state = this.canvas.state,
 			shadowOffset = state.shadowOffset,

@@ -26,8 +26,8 @@
 
 	Line.stroke.prototype.draw = function () {
 	    if (!this.first || !this.second) return;
-	    var first = $.extend({}, this.first),
-	    	second = $.extend({}, this.second),
+	    var first = _.extend({}, this.first),
+	    	second = _.extend({}, this.second),
 	    	a, x, y, pi = Math.PI;
 	    if (this.tool.shiftKey) {
 	    	x = second.x - first.x;
