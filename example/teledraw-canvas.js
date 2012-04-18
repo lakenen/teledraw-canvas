@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.7.1 (http://semver.org/)
+	Version 0.7.2 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2124,7 +2124,7 @@ function contains(container, maybe) {
 		this.state.shadowBlur = sb;
 	};
 	
-	APIprototype.updateDisplayCanvas = function () {
+	APIprototype.updateDisplayCanvas = function (noTrigger) {
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom, 
@@ -2133,9 +2133,9 @@ function contains(container, maybe) {
 			sw = dw / zoom,
 			sh = dh / zoom;
 		dctx.clearRect(0, 0, dw, dh);
-		this.trigger('display.update:before');
+		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
-		this.trigger('display.update:after');
+		if (noTrigger !== true) this.trigger('display.update:after');
 	};
 	
 	/* this version attempts at better performance, but I don't think it is actually significantly better.
