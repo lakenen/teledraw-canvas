@@ -39,24 +39,25 @@
 		maxZoom: 8 // (8 == 800%)
 	};
 	
-	var Canvas = Canvas || function (w, h) {
+	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
-		c.width = w; c.height = h;
+		if (w) c.width = w;
+		if (h) c.height = h;
 		return c;
 	};
 	
 	var API = function (elt, options) {
 		var self = this,
-			element = self.element = $(elt),
-			state = self.state = $.extend({}, defaultState, options);
+			element = self.element = elt.getContext ? elt : document.getElementById(elt);
+			state = self.state = _.extend({}, defaultState, options);
 		
-		if (typeof element.get(0).getContext != 'function') {
-			alert('Your browser does not support HTML canvas!');
-			return;
+		if (typeof (new Canvas()).getContext != 'function') {
+			throw new Error('Your browser does not support HTML canvas!');
+			return false;
 		}
 		
-		state.width = state.displayWidth || state.width || parseInt(element.attr('width'));
-		state.height = state.displayHeight || state.height || parseInt(element.attr('height'));
+		element.width = state.width = state.displayWidth || state.width || element.width;
+		element.height = state.height = state.displayHeight || state.height || element.height;
 		state.fullWidth = state.fullWidth || state.width;
 		state.fullHeight = state.fullHeight || state.height;
 		
@@ -66,82 +67,69 @@
 			state.fullHeight = state.fullWidth * state.height / state.width;
 		}
 		
-		element.attr({
-			width: state.width,
-			height: state.height
-		});
-		
-		self._displayCanvas = $(element).get(0);
+		self._displayCanvas = element;
 		
 		self._canvas = new Canvas(state.fullWidth, state.fullHeight);
 		
-		self.history = new TeledrawCanvas.History(this);
+		self.history = new TeledrawCanvas.History(self);
 		
 		self.defaults();
 		self.zoom(0);
 		self.history.checkpoint();
 		TeledrawCanvas.canvases[_id++] = self;
 		
-		var gInitZoom;
-		element.css({ width: state.width, height: state.height })
-			.bind('gesturestart', function (evt) {
-	    		if (state.tool.name == 'grab') {
-					gInitZoom = state.currentZoom;
-	    		}
-			})
-			.bind('gesturechange', function (evt) {
-	    		if (state.tool.name == 'grab') {
-	    			var pt = state.last;//$.extend({},state.last);
-	    			self.zoom(gInitZoom*evt.originalEvent.scale, pt.xd, pt.yd);
-	    		}
-	    		evt.preventDefault();
-			})
-			.bind('gestureend', function (evt) {
-			})
-			.bind('dblclick', function (evt) {
-				var pt = getCoord(evt);
-	            state.tool.dblclick(pt);
-			})
-			.bind('mouseenter', function (evt) {
-	            var pt = getCoord(evt);
-	            state.tool.enter(state.mouseDown, pt);
-	            state.last = pt;
-	            state.mouseOver = TRUE;
-	        })      
-	        .bind('mousedown touchstart', mouseDown)
-	        .bind('mouseleave', function (evt) {
-	            var pt = getCoord(evt);
-	            state.tool.leave(state.mouseDown, pt);
-	            state.mouseOver = FALSE;
-	        });
-        
-        
-	    $(window).bind('mousemove touchmove', mouseMove);
+		var gInitZoom, lastMoveEvent = NULL;
+		addEvent(element, 'gesturestart', gestureStart);
+		addEvent(element, 'gesturechange', gestureChange);
+		addEvent(element, 'gestureend', gestureEnd);
+		addEvent(element, 'dblclick', dblClick);
+		addEvent(element, 'mouseenter', mouseEnter); 
+		addEvent(element, 'mousedown', mouseDown);    
+		addEvent(element, 'touchstart', mouseDown);
+		addEvent(element, 'mouseleave', mouseLeave);
+	    addEvent(window, 'mousemove', mouseMove);        
+	    addEvent(window, 'touchmove', mouseMove);
 	   
-	    var lastMoveEvent = null;
+		function mouseEnter(evt) {
+			var pt = getCoord(evt);
+			state.tool.enter(state.mouseDown, pt);
+			state.last = pt;
+			state.mouseOver = TRUE;
+		}
+		
+		function mouseLeave(evt) {
+			var pt = getCoord(evt);
+			state.tool.leave(state.mouseDown, pt);
+			state.mouseOver = FALSE;
+		}
+		
+		function dblClick(evt) {
+			var pt = getCoord(evt);
+			state.tool.dblclick(pt);
+		}
+		
 	    function mouseMove(e) {
-	    	if (e.type == 'touchmove' && e.originalEvent.touches.length > 1) {
+	    	if (e.type == 'touchmove' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
-	    	target = $(e.target).parents().andSelf();
-	        if (target.is(element) || state.mouseDown) {
+	        if (e.target == element || state.mouseDown) {
 	        	var pt = getCoord(e);
 				state.tool.move(state.mouseDown, state.last, pt);
 				state.last = pt;
 				self.trigger('mousemove', pt, e);
 	            lastMoveEvent = e.type;
             	e.preventDefault();
+        		return FALSE;
 	        }
 	    }
 
 	    function mouseDown(e) {
             var pt = state.last = getCoord(e);
-	    	if (e.type == 'touchstart' && e.originalEvent.touches.length > 1) {
+	    	if (e.type == 'touchstart' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
-            $(window)
-                .one('mouseup touchend', mouseUp);
+            addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
 			state.tool.down(pt);
@@ -149,10 +137,13 @@
 			
         	document.onselectstart = function() { return FALSE; };
         	e.preventDefault();
+        	return FALSE;
         }
 	    
 	    function mouseUp(e) {
-	    	if (e.type == 'touchend' && e.originalEvent.touches.length > 1) {
+            removeEvent(window, e.type === 'mouseup' ? 'mouseup' : 'touchend', mouseUp);
+            
+	    	if (e.type == 'touchend' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
 	    	
@@ -162,17 +153,38 @@
         
         	document.onselectstart = function() { return TRUE; };
         	e.preventDefault();
+        	return FALSE;
 	    }
 	    
+	    function gestureStart(evt) {
+			if (state.tool.name == 'grab') {
+				gInitZoom = state.currentZoom;
+			}
+		}
+		
+		function gestureChange(evt) {
+			if (state.tool.name == 'grab') {
+				var pt = state.last;
+				self.zoom(gInitZoom*evt.scale, pt.xd, pt.yd);
+			}
+			evt.preventDefault();
+        	return FALSE;
+		}
+		
+		function gestureEnd(evt) {
+		
+		}
+	    
 		function getCoord(e) {
-	        var offset = element.offset(),
-		        pageX = e.pageX || e.originalEvent.touches && e.originalEvent.touches[0].pageX,
-				pageY = e.pageY || e.originalEvent.touches && e.originalEvent.touches[0].pageY;
+	        var left = element.offsetLeft,
+	        	top = element.offsetTop,
+	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
+				pageY = e.pageY || e.touches && e.touches[0].pageY;
 	        return {
-	        	x: floor((pageX - offset.left)/state.currentZoom) + state.currentOffset.x || 0,
-	        	y: floor((pageY - offset.top)/state.currentZoom) + state.currentOffset.y || 0,
-	        	xd: floor(pageX - offset.left) || 0,
-	        	yd: floor(pageY - offset.top) || 0
+	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
+	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
+	        	xd: floor(pageX - left) || 0,
+	        	yd: floor(pageY - top) || 0
 	        };
 		}
 	};
@@ -257,8 +269,8 @@
 	    var cursors = c.split(/,\s*/);
 	    do {
 	    	c = cursors.shift();
-	    	this.element.css('cursor', c);
-	    } while (c.length && this.element.css('cursor') != c);
+	    	this.element.style.cursor = c;
+	    } while (c.length && this.element.style.cursor != c);
 	    return this;
 	};
 	
@@ -294,10 +306,7 @@
 			x = x !== UNDEFINED ? x : 0;
 			y = y !== UNDEFINED ? y : 0;
 			
-			var tmpcanvas = $('<canvas>').attr({
-				width: w,
-				height: h
-			}).get(0);
+			var tmpcanvas = this.getTempCanvas(w, h);
 			tmpcanvas.getContext('2d').drawImage(this.canvas(), x, y, w, h, 0, 0, w, h);
 			return tmpcanvas.toDataURL();
 		}
@@ -306,14 +315,11 @@
 	
 	// returns a new (blank) canvas element the same size as this tdcanvas element
 	APIprototype.getTempCanvas = function (w, h) {
-		var tmp = $('<canvas>').get(0);
-		tmp.width = w || this._canvas.width;
-		tmp.height = h || this._canvas.height;
-		return tmp;
+		return new Canvas(w || this._canvas.width, h || this._canvas.height);
 	};
 
 	// draws an image data url to the canvas and when it's finished, calls the given callback function
-	APIprototype.fromDataURL = function (url, cb) {
+	APIprototype.fromDataURL = APIprototype.fromImageURL = function (url, cb) {
 		var self = this,
 			img = new Image();
 		img.onload = function () {
@@ -348,7 +354,7 @@
 	
 	// sets the current color, either as an array (see getColor) or any acceptable css color string
 	APIprototype.setColor = function (color) {
-		if (!$.isArray(color)) {
+		if (!_.isArray(color)) {
 			color = TeledrawCanvas.util.parseColorString(color);
 		}
 		this.setRGBAArrayColor(color);
@@ -418,16 +424,20 @@
 		if (w/h !== self._canvas.width/self._canvas.height) {
 			throw new Error('Not the same aspect ratio!');
 		}
-		self._displayCanvas.width = w;
-		self._displayCanvas.height = h;
+		self._displayCanvas.width = self.state.width = w;
+		self._displayCanvas.height = self.state.height = h;
 		self.updateDisplayCanvas();
-		return self;
+		return self.zoom(self.state.currentZoom);
 	};
 	
 	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
 	// optionally at a given point (in display canvas coordinates)
 	// otherwise in the center of the current display
+	// if no arguments are specified, returns the current zoom level
 	APIprototype.zoom = function (z, x, y) {
+		if (arguments.length === 0) {
+			return this.state.currentZoom;
+		}
 		var self = this,
 			panx = 0, 
 			pany = 0,
@@ -464,7 +474,11 @@
 	
 	// pan the canvas to the given (relative) x,y position
 	// unless absolute === TRUE
+	// if no arguments are specified, returns the current absolute position
 	APIprototype.pan = function (x, y, absolute) {
+		if (arguments.length === 0) {
+			return this.state.currentOffset;
+		}
 		var self = this,
 			zoom = self.state.currentZoom,
 			currentX = self.state.currentOffset.x,
@@ -483,6 +497,8 @@
 	};
 	
 	// events mixin
-	$.extend(APIprototype, Events);
+	_.extend(APIprototype, Events);
 	TeledrawCanvas.api = API;
 })(TeledrawCanvas);
+
+
