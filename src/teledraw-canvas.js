@@ -217,8 +217,8 @@
 			zoom = this.state.currentZoom, 
 			dw = dctx.canvas.width,
 			dh = dctx.canvas.height,
-			sw = dw / zoom,
-			sh = dh / zoom;
+			sw = floor(dw / zoom),
+			sh = floor(dh / zoom);
 		dctx.clearRect(0, 0, dw, dh);
 		this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
@@ -428,7 +428,6 @@
 		}
 		self._displayCanvas.width = self.state.width = w;
 		self._displayCanvas.height = self.state.height = h;
-		self.updateDisplayCanvas();
 		return self.zoom(self.state.currentZoom);
 	};
 	
@@ -453,6 +452,8 @@
 		
 		// restrict the zoom
 		z = clamp(z || 0, displayWidth / self._canvas.width, self.state.maxZoom);
+		
+		// figure out where to zoom at
 		if (z !== currentZoom) {
 			if (z > currentZoom) {
 				// zooming in
@@ -466,7 +467,6 @@
 			panx *= z;
 			pany *= z;
 		}
-		//console.log(panx, pany);
 		self.state.currentZoom = z;
 		self.trigger('zoom', z, currentZoom);
 		self.pan(panx, pany);
@@ -485,15 +485,14 @@
 			zoom = self.state.currentZoom,
 			currentX = self.state.currentOffset.x,
 			currentY = self.state.currentOffset.y,
-			maxWidth = self._canvas.width - self._displayCanvas.width/zoom,
-			maxHeight = self._canvas.height - self._displayCanvas.height/zoom;
+			maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
+			maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
 		x = absolute === TRUE ? x/zoom : currentX - (x || 0)/zoom;
 		y = absolute === TRUE ? y/zoom : currentY - (y || 0)/zoom;
-		self.state.currentOffset = {
-			x: floor(clamp(x, 0, maxWidth)),
-			y: floor(clamp(y, 0, maxHeight))
-		};
-		self.trigger('pan', x, y);
+		x = floor(clamp(x, 0, maxWidth));
+		y = floor(clamp(y, 0, maxHeight))
+		self.state.currentOffset = { x: x, y: y };
+		self.trigger('pan', self.state.currentOffset);
 		self.updateDisplayCanvas();
 		return self;
 	};
