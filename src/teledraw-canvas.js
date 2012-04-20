@@ -14,14 +14,14 @@
 	
 	// global default state
 	var defaultState = {
-		last: null,
-		currentTool: 'pencil',
-		previousTool: 'pencil',
-		tool: null,
+		last: NULL,
+		currentTool: NULL,
+		previousTool: NULL,
+		tool: NULL,
 		mouseDown: FALSE,
 		mouseOver: FALSE,
-		width: null,
-		height: null,
+		width: NULL,
+		height: NULL,
 		
 		currentZoom: 1,
 		currentOffset: { x: 0, y: 0 },
@@ -30,8 +30,8 @@
 		// related note: safari has trouble with high values for shadowOffset
 		shadowOffset: 5000,
 		
-		enableZoom: false,
-		enableWacomSupport: true,
+		enableZoom: TRUE,
+		enableWacomSupport: TRUE,
 		
 		// default limits
 		maxHistory: 10,
@@ -44,7 +44,7 @@
 	
 	var wacomPlugin;
     
-    function embedWacomObject() {
+    function wacomEmbedObject() {
     	if (!wacomPlugin) {
     		var plugin;
     		if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
@@ -64,7 +64,18 @@
     		wacomPlugin = plugin;
     	}
     }
+    
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		return wacomPlugin.penAPI.pressure;
+    	}
+    }
 
+	function wacomIsEraser() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		return wacomPlugin.penAPI.pointerType === 3;
+    	}
+	}
 	
 	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
@@ -84,7 +95,7 @@
 		}
 		
 		if (state.enableWacomSupport) {
-			embedWacomObject();
+			wacomEmbedObject();
 		}
 		
 		element.width = state.width = state.displayWidth || state.width || element.width;
@@ -165,6 +176,10 @@
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
+			if (wacomIsEraser() && state.currentTool !== 'eraser') {
+				self.setTool('eraser');
+				state.wacomWasEraser = true;
+			}
 			state.tool.down(pt);
 			self.trigger('mousedown', pt, e);
 			
@@ -183,6 +198,11 @@
 			state.mouseDown = FALSE;
 			state.tool.up(state.last);
 			self.trigger('mouseup', state.last, e);
+        	
+			if (state.wacomWasEraser === true) {
+				self.previousTool();
+				state.wacomWasEraser = false;
+			}
         
         	document.onselectstart = function() { return TRUE; };
         	e.preventDefault();
@@ -213,7 +233,7 @@
 	        	top = element.offsetTop,
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = wacomPlugin && wacomPlugin.penAPI ? wacomPlugin.penAPI.pressure : null;
+				pressure = wacomGetPressure();
 
 	        return {
 	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
@@ -428,6 +448,9 @@
 	
 	// set the current tool, given the string name of the tool (e.g. 'pencil')
 	APIprototype.setTool = function (name) {
+		if (this.state.currentTool === name) {
+			return this;
+		}
 		this.state.previousTool = this.state.currentTool;
 		this.state.currentTool = name;
 		if (!TeledrawCanvas.tools[name]) {
