@@ -30,6 +30,9 @@
 		// related note: safari has trouble with high values for shadowOffset
 		shadowOffset: 5000,
 		
+		enableZoom: false,
+		enableWacomSupport: true,
+		
 		// default limits
 		maxHistory: 10,
 		minStrokeSize: 500,
@@ -38,6 +41,30 @@
 		maxStrokeSoftness: 100,
 		maxZoom: 8 // (8 == 800%)
 	};
+	
+	var wacomPlugin;
+    
+    function embedWacomObject() {
+    	if (!wacomPlugin) {
+    		var plugin;
+    		if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
+    			plugin = document.createElement('embed');
+    			plugin.name = plugin.id = 'wacom-plugin';
+    			plugin.type = 'application/x-wacomtabletplugin';
+    		} else {
+    			plugin = document.createElement('object');
+    			plugin.classid = 'CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308';
+				plugin.codebase = "fbWacomTabletPlugin.cab";
+    		}
+    		
+			plugin.style.width = plugin.style.height = '1px';
+			plugin.style.top = plugin.style.left = '-10000px';
+			plugin.style.position = 'absolute';
+    		document.body.appendChild(plugin);
+    		wacomPlugin = plugin;
+    	}
+    }
+
 	
 	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
@@ -56,6 +83,10 @@
 			return false;
 		}
 		
+		if (state.enableWacomSupport) {
+			embedWacomObject();
+		}
+		
 		element.width = state.width = state.displayWidth || state.width || element.width;
 		element.height = state.height = state.displayHeight || state.height || element.height;
 		state.fullWidth = state.fullWidth || state.width;
@@ -68,9 +99,11 @@
 		}
 		
 		self._displayCanvas = element;
-		
-		self._canvas = new Canvas(state.fullWidth, state.fullHeight);
-		
+		if (state.enableZoom) {
+			self._canvas = new Canvas(state.fullWidth, state.fullHeight);
+		} else {
+			self._canvas = element;
+		}
 		self.history = new TeledrawCanvas.History(self);
 		
 		self.defaults();
@@ -179,12 +212,15 @@
 	        var left = element.offsetLeft,
 	        	top = element.offsetTop,
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
-				pageY = e.pageY || e.touches && e.touches[0].pageY;
+				pageY = e.pageY || e.touches && e.touches[0].pageY,
+				pressure = wacomPlugin && wacomPlugin.penAPI ? wacomPlugin.penAPI.pressure : null;
+
 	        return {
 	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
 	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
 	        	xd: floor(pageX - left) || 0,
-	        	yd: floor(pageY - top) || 0
+	        	yd: floor(pageY - top) || 0,
+	        	p: pressure
 	        };
 		}
 	};
@@ -212,6 +248,9 @@
 	};
 	
 	APIprototype.updateDisplayCanvas = function () {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom, 
@@ -420,6 +459,9 @@
 	// (throws an error if it's not the same aspect ratio as the source canvas)
 	// @todo/consider: release this constraint and just change the size of the source canvas?
 	APIprototype.resize = function (w, h) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
 			ar1 = Math.round(w/h*100)/100;
@@ -438,6 +480,9 @@
 	APIprototype.zoom = function (z, x, y) {
 		if (arguments.length === 0) {
 			return this.state.currentZoom;
+		}
+		if (this.state.enableZoom === false) {
+			return this;
 		}
 		var self = this,
 			panx = 0, 
@@ -480,6 +525,9 @@
 	APIprototype.pan = function (x, y, absolute) {
 		if (arguments.length === 0) {
 			return this.state.currentOffset;
+		}
+		if (this.state.enableZoom === false) {
+			return this;
 		}
 		var self = this,
 			zoom = self.state.currentZoom,

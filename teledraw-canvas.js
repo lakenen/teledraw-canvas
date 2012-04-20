@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.6.3 (http://semver.org/)
+	Version 0.7.3 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -526,6 +526,1158 @@ Events = (function () {
 	return Events;
 })();
 
+
+// written by Dean Edwards, 2005
+// with input from Tino Zijdel, Matthias Miller, Diego Perini
+
+// http://dean.edwards.name/weblog/2005/10/add-event/
+
+function addEvent(element, type, handler) {
+	// add mouseenter and mouseleave events
+	if (type === 'mouseenter' || type === 'mouseleave') {
+		var mouseEnter = type === 'mouseenter',
+			ie = mouseEnter ? 'fromElement' : 'toElement';
+		type = mouseEnter ? 'mouseover' : 'mouseout';
+		addEvent(element, type, function (e) {
+			e = e || window.event;
+			var target = e.target || e.srcElement,
+				related = e.relatedTarget || e[ie];
+			if ((element === target || contains(element, target)) &&
+				!contains(element, related))
+			{
+				return handler.apply(this, arguments);
+			}
+		});
+		return;
+	}
+
+	if (element.addEventListener) {
+		element.addEventListener(type, handler, false);
+	} else {
+		// assign each event handler a unique ID
+		if (!handler.$$guid) handler.$$guid = addEvent.guid++;
+		// create a hash table of event types for the element
+		if (!element.events) element.events = {};
+		// create a hash table of event handlers for each element/event pair
+		var handlers = element.events[type];
+		if (!handlers) {
+			handlers = element.events[type] = {};
+			// store the existing event handler (if there is one)
+			if (element["on" + type]) {
+				handlers[0] = element["on" + type];
+			}
+		}
+		// store the event handler in the hash table
+		handlers[handler.$$guid] = handler;
+		// assign a global event handler to do all the work
+		element["on" + type] = handleEvent;
+	}
+};
+// a counter used to create unique IDs
+addEvent.guid = 1;
+
+function removeEvent(element, type, handler) {
+	if (element.removeEventListener) {
+		element.removeEventListener(type, handler, false);
+	} else {
+		// delete the event handler from the hash table
+		if (element.events && element.events[type]) {
+			delete element.events[type][handler.$$guid];
+		}
+	}
+};
+
+function handleEvent(event) {
+	var returnValue = true;
+	// grab the event object (IE uses a global event object)
+	event = event || fixEvent(((this.ownerDocument || this.document || this).parentWindow || window).event);
+	// get a reference to the hash table of event handlers
+	var handlers = this.events[event.type];
+	// execute each event handler
+	for (var i in handlers) {
+		this.$$handleEvent = handlers[i];
+		if (this.$$handleEvent(event) === false) {
+			returnValue = false;
+		}
+	}
+	return returnValue;
+};
+
+function fixEvent(event) {
+	// add W3C standard event methods
+	event.preventDefault = fixEvent.preventDefault;
+	event.stopPropagation = fixEvent.stopPropagation;
+	return event;
+};
+fixEvent.preventDefault = function() {
+	this.returnValue = false;
+};
+fixEvent.stopPropagation = function() {
+	this.cancelBubble = true;
+};
+
+function contains(container, maybe) {
+    return container.contains ? container.contains(maybe) :
+        !!(container.compareDocumentPosition(maybe) & 16);
+}//     Underscore.js 1.3.3
+//     (c) 2009-2012 Jeremy Ashkenas, DocumentCloud Inc.
+//     Underscore is freely distributable under the MIT license.
+//     Portions of Underscore are inspired or borrowed from Prototype,
+//     Oliver Steele's Functional, and John Resig's Micro-Templating.
+//     For all details and documentation:
+//     http://documentcloud.github.com/underscore
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `global` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Establish the object that gets returned to break out of a loop iteration.
+  var breaker = {};
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var slice            = ArrayProto.slice,
+      unshift          = ArrayProto.unshift,
+      toString         = ObjProto.toString,
+      hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeForEach      = ArrayProto.forEach,
+    nativeMap          = ArrayProto.map,
+    nativeReduce       = ArrayProto.reduce,
+    nativeReduceRight  = ArrayProto.reduceRight,
+    nativeFilter       = ArrayProto.filter,
+    nativeEvery        = ArrayProto.every,
+    nativeSome         = ArrayProto.some,
+    nativeIndexOf      = ArrayProto.indexOf,
+    nativeLastIndexOf  = ArrayProto.lastIndexOf,
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind;
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) { return new wrapper(obj); };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object via a string identifier,
+  // for Closure Compiler "advanced" mode.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root['_'] = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.3.3';
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles objects with the built-in `forEach`, arrays, and raw objects.
+  // Delegates to **ECMAScript 5**'s native `forEach` if available.
+  var each = _.each = _.forEach = function(obj, iterator, context) {
+    if (obj == null) return;
+    if (nativeForEach && obj.forEach === nativeForEach) {
+      obj.forEach(iterator, context);
+    } else if (obj.length === +obj.length) {
+      for (var i = 0, l = obj.length; i < l; i++) {
+        if (i in obj && iterator.call(context, obj[i], i, obj) === breaker) return;
+      }
+    } else {
+      for (var key in obj) {
+        if (_.has(obj, key)) {
+          if (iterator.call(context, obj[key], key, obj) === breaker) return;
+        }
+      }
+    }
+  };
+
+  // Return the results of applying the iterator to each element.
+  // Delegates to **ECMAScript 5**'s native `map` if available.
+  _.map = _.collect = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    if (nativeMap && obj.map === nativeMap) return obj.map(iterator, context);
+    each(obj, function(value, index, list) {
+      results[results.length] = iterator.call(context, value, index, list);
+    });
+    if (obj.length === +obj.length) results.length = obj.length;
+    return results;
+  };
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`. Delegates to **ECMAScript 5**'s native `reduce` if available.
+  _.reduce = _.foldl = _.inject = function(obj, iterator, memo, context) {
+    var initial = arguments.length > 2;
+    if (obj == null) obj = [];
+    if (nativeReduce && obj.reduce === nativeReduce) {
+      if (context) iterator = _.bind(iterator, context);
+      return initial ? obj.reduce(iterator, memo) : obj.reduce(iterator);
+    }
+    each(obj, function(value, index, list) {
+      if (!initial) {
+        memo = value;
+        initial = true;
+      } else {
+        memo = iterator.call(context, memo, value, index, list);
+      }
+    });
+    if (!initial) throw new TypeError('Reduce of empty array with no initial value');
+    return memo;
+  };
+
+  // The right-associative version of reduce, also known as `foldr`.
+  // Delegates to **ECMAScript 5**'s native `reduceRight` if available.
+  _.reduceRight = _.foldr = function(obj, iterator, memo, context) {
+    var initial = arguments.length > 2;
+    if (obj == null) obj = [];
+    if (nativeReduceRight && obj.reduceRight === nativeReduceRight) {
+      if (context) iterator = _.bind(iterator, context);
+      return initial ? obj.reduceRight(iterator, memo) : obj.reduceRight(iterator);
+    }
+    var reversed = _.toArray(obj).reverse();
+    if (context && !initial) iterator = _.bind(iterator, context);
+    return initial ? _.reduce(reversed, iterator, memo, context) : _.reduce(reversed, iterator);
+  };
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, iterator, context) {
+    var result;
+    any(obj, function(value, index, list) {
+      if (iterator.call(context, value, index, list)) {
+        result = value;
+        return true;
+      }
+    });
+    return result;
+  };
+
+  // Return all the elements that pass a truth test.
+  // Delegates to **ECMAScript 5**'s native `filter` if available.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    if (nativeFilter && obj.filter === nativeFilter) return obj.filter(iterator, context);
+    each(obj, function(value, index, list) {
+      if (iterator.call(context, value, index, list)) results[results.length] = value;
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, iterator, context) {
+    var results = [];
+    if (obj == null) return results;
+    each(obj, function(value, index, list) {
+      if (!iterator.call(context, value, index, list)) results[results.length] = value;
+    });
+    return results;
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Delegates to **ECMAScript 5**'s native `every` if available.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, iterator, context) {
+    var result = true;
+    if (obj == null) return result;
+    if (nativeEvery && obj.every === nativeEvery) return obj.every(iterator, context);
+    each(obj, function(value, index, list) {
+      if (!(result = result && iterator.call(context, value, index, list))) return breaker;
+    });
+    return !!result;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Delegates to **ECMAScript 5**'s native `some` if available.
+  // Aliased as `any`.
+  var any = _.some = _.any = function(obj, iterator, context) {
+    iterator || (iterator = _.identity);
+    var result = false;
+    if (obj == null) return result;
+    if (nativeSome && obj.some === nativeSome) return obj.some(iterator, context);
+    each(obj, function(value, index, list) {
+      if (result || (result = iterator.call(context, value, index, list))) return breaker;
+    });
+    return !!result;
+  };
+
+  // Determine if a given value is included in the array or object using `===`.
+  // Aliased as `contains`.
+  _.include = _.contains = function(obj, target) {
+    var found = false;
+    if (obj == null) return found;
+    if (nativeIndexOf && obj.indexOf === nativeIndexOf) return obj.indexOf(target) != -1;
+    found = any(obj, function(value) {
+      return value === target;
+    });
+    return found;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    return _.map(obj, function(value) {
+      return (_.isFunction(method) ? method || value : value[method]).apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, function(value){ return value[key]; });
+  };
+
+  // Return the maximum element or (element-based computation).
+  _.max = function(obj, iterator, context) {
+    if (!iterator && _.isArray(obj) && obj[0] === +obj[0]) return Math.max.apply(Math, obj);
+    if (!iterator && _.isEmpty(obj)) return -Infinity;
+    var result = {computed : -Infinity};
+    each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      computed >= result.computed && (result = {value : value, computed : computed});
+    });
+    return result.value;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iterator, context) {
+    if (!iterator && _.isArray(obj) && obj[0] === +obj[0]) return Math.min.apply(Math, obj);
+    if (!iterator && _.isEmpty(obj)) return Infinity;
+    var result = {computed : Infinity};
+    each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      computed < result.computed && (result = {value : value, computed : computed});
+    });
+    return result.value;
+  };
+
+  // Shuffle an array.
+  _.shuffle = function(obj) {
+    var shuffled = [], rand;
+    each(obj, function(value, index, list) {
+      rand = Math.floor(Math.random() * (index + 1));
+      shuffled[index] = shuffled[rand];
+      shuffled[rand] = value;
+    });
+    return shuffled;
+  };
+
+  // Sort the object's values by a criterion produced by an iterator.
+  _.sortBy = function(obj, val, context) {
+    var iterator = _.isFunction(val) ? val : function(obj) { return obj[val]; };
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value : value,
+        criteria : iterator.call(context, value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria, b = right.criteria;
+      if (a === void 0) return 1;
+      if (b === void 0) return -1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    }), 'value');
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = function(obj, val) {
+    var result = {};
+    var iterator = _.isFunction(val) ? val : function(obj) { return obj[val]; };
+    each(obj, function(value, index) {
+      var key = iterator(value, index);
+      (result[key] || (result[key] = [])).push(value);
+    });
+    return result;
+  };
+
+  // Use a comparator function to figure out at what index an object should
+  // be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iterator) {
+    iterator || (iterator = _.identity);
+    var low = 0, high = array.length;
+    while (low < high) {
+      var mid = (low + high) >> 1;
+      iterator(array[mid]) < iterator(obj) ? low = mid + 1 : high = mid;
+    }
+    return low;
+  };
+
+  // Safely convert anything iterable into a real, live array.
+  _.toArray = function(obj) {
+    if (!obj)                                     return [];
+    if (_.isArray(obj))                           return slice.call(obj);
+    if (_.isArguments(obj))                       return slice.call(obj);
+    if (obj.toArray && _.isFunction(obj.toArray)) return obj.toArray();
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    return _.isArray(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    return (n != null) && !guard ? slice.call(array, 0, n) : array[0];
+  };
+
+  // Returns everything but the last entry of the array. Especcialy useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N. The **guard** check allows it to work with
+  // `_.map`.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, array.length - ((n == null) || guard ? 1 : n));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array. The **guard** check allows it to work with `_.map`.
+  _.last = function(array, n, guard) {
+    if ((n != null) && !guard) {
+      return slice.call(array, Math.max(array.length - n, 0));
+    } else {
+      return array[array.length - 1];
+    }
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail`.
+  // Especially useful on the arguments object. Passing an **index** will return
+  // the rest of the values in the array from that index onward. The **guard**
+  // check allows it to work with `_.map`.
+  _.rest = _.tail = function(array, index, guard) {
+    return slice.call(array, (index == null) || guard ? 1 : index);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, function(value){ return !!value; });
+  };
+
+  // Return a completely flattened version of an array.
+  _.flatten = function(array, shallow) {
+    return _.reduce(array, function(memo, value) {
+      if (_.isArray(value)) return memo.concat(shallow ? value : _.flatten(value));
+      memo[memo.length] = value;
+      return memo;
+    }, []);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iterator) {
+    var initial = iterator ? _.map(array, iterator) : array;
+    var results = [];
+    // The `isSorted` flag is irrelevant if the array only contains two elements.
+    if (array.length < 3) isSorted = true;
+    _.reduce(initial, function (memo, value, index) {
+      if (isSorted ? _.last(memo) !== value || !memo.length : !_.include(memo, value)) {
+        memo.push(value);
+        results.push(array[index]);
+      }
+      return memo;
+    }, []);
+    return results;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(_.flatten(arguments, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays. (Aliased as "intersect" for back-compat.)
+  _.intersection = _.intersect = function(array) {
+    var rest = slice.call(arguments, 1);
+    return _.filter(_.uniq(array), function(item) {
+      return _.every(rest, function(other) {
+        return _.indexOf(other, item) >= 0;
+      });
+    });
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = _.flatten(slice.call(arguments, 1), true);
+    return _.filter(array, function(value){ return !_.include(rest, value); });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    var args = slice.call(arguments);
+    var length = _.max(_.pluck(args, 'length'));
+    var results = new Array(length);
+    for (var i = 0; i < length; i++) results[i] = _.pluck(args, "" + i);
+    return results;
+  };
+
+  // If the browser doesn't supply us with indexOf (I'm looking at you, **MSIE**),
+  // we need this function. Return the position of the first occurrence of an
+  // item in an array, or -1 if the item is not included in the array.
+  // Delegates to **ECMAScript 5**'s native `indexOf` if available.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = function(array, item, isSorted) {
+    if (array == null) return -1;
+    var i, l;
+    if (isSorted) {
+      i = _.sortedIndex(array, item);
+      return array[i] === item ? i : -1;
+    }
+    if (nativeIndexOf && array.indexOf === nativeIndexOf) return array.indexOf(item);
+    for (i = 0, l = array.length; i < l; i++) if (i in array && array[i] === item) return i;
+    return -1;
+  };
+
+  // Delegates to **ECMAScript 5**'s native `lastIndexOf` if available.
+  _.lastIndexOf = function(array, item) {
+    if (array == null) return -1;
+    if (nativeLastIndexOf && array.lastIndexOf === nativeLastIndexOf) return array.lastIndexOf(item);
+    var i = array.length;
+    while (i--) if (i in array && array[i] === item) return i;
+    return -1;
+  };
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (arguments.length <= 1) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = arguments[2] || 1;
+
+    var len = Math.max(Math.ceil((stop - start) / step), 0);
+    var idx = 0;
+    var range = new Array(len);
+
+    while(idx < len) {
+      range[idx++] = start;
+      start += step;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Reusable constructor function for prototype setting.
+  var ctor = function(){};
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Binding with arguments is also known as `curry`.
+  // Delegates to **ECMAScript 5**'s native `Function.bind` if available.
+  // We check for `func.bind` first, to fail fast when `func` is undefined.
+  _.bind = function bind(func, context) {
+    var bound, args;
+    if (func.bind === nativeBind && nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError;
+    args = slice.call(arguments, 2);
+    return bound = function() {
+      if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
+      ctor.prototype = func.prototype;
+      var self = new ctor;
+      var result = func.apply(self, args.concat(slice.call(arguments)));
+      if (Object(result) === result) return result;
+      return self;
+    };
+  };
+
+  // Bind all of an object's methods to that object. Useful for ensuring that
+  // all callbacks defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var funcs = slice.call(arguments, 1);
+    if (funcs.length == 0) funcs = _.functions(obj);
+    each(funcs, function(f) { obj[f] = _.bind(obj[f], obj); });
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memo = {};
+    hasher || (hasher = _.identity);
+    return function() {
+      var key = hasher.apply(this, arguments);
+      return _.has(memo, key) ? memo[key] : (memo[key] = func.apply(this, arguments));
+    };
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){ return func.apply(null, args); }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = function(func) {
+    return _.delay.apply(_, [func, 1].concat(slice.call(arguments, 1)));
+  };
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time.
+  _.throttle = function(func, wait) {
+    var context, args, timeout, throttling, more, result;
+    var whenDone = _.debounce(function(){ more = throttling = false; }, wait);
+    return function() {
+      context = this; args = arguments;
+      var later = function() {
+        timeout = null;
+        if (more) func.apply(context, args);
+        whenDone();
+      };
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (throttling) {
+        more = true;
+      } else {
+        result = func.apply(context, args);
+      }
+      whenDone();
+      throttling = true;
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout;
+    return function() {
+      var context = this, args = arguments;
+      var later = function() {
+        timeout = null;
+        if (!immediate) func.apply(context, args);
+      };
+      if (immediate && !timeout) func.apply(context, args);
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = function(func) {
+    var ran = false, memo;
+    return function() {
+      if (ran) return memo;
+      ran = true;
+      return memo = func.apply(this, arguments);
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return function() {
+      var args = [func].concat(slice.call(arguments, 0));
+      return wrapper.apply(this, args);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var funcs = arguments;
+    return function() {
+      var args = arguments;
+      for (var i = funcs.length - 1; i >= 0; i--) {
+        args = [funcs[i].apply(this, args)];
+      }
+      return args[0];
+    };
+  };
+
+  // Returns a function that will only be executed after being called N times.
+  _.after = function(times, func) {
+    if (times <= 0) return func();
+    return function() {
+      if (--times < 1) { return func.apply(this, arguments); }
+    };
+  };
+
+  // Object Functions
+  // ----------------
+
+  // Retrieve the names of an object's properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = nativeKeys || function(obj) {
+    if (obj !== Object(obj)) throw new TypeError('Invalid object');
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys[keys.length] = key;
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    return _.map(obj, _.identity);
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = function(obj) {
+    each(slice.call(arguments, 1), function(source) {
+      for (var prop in source) {
+        obj[prop] = source[prop];
+      }
+    });
+    return obj;
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(obj) {
+    var result = {};
+    each(_.flatten(slice.call(arguments, 1)), function(key) {
+      if (key in obj) result[key] = obj[key];
+    });
+    return result;
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = function(obj) {
+    each(slice.call(arguments, 1), function(source) {
+      for (var prop in source) {
+        if (obj[prop] == null) obj[prop] = source[prop];
+      }
+    });
+    return obj;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Internal recursive comparison function.
+  function eq(a, b, stack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the Harmony `egal` proposal: http://wiki.ecmascript.org/doku.php?id=harmony:egal.
+    if (a === b) return a !== 0 || 1 / a == 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a._chain) a = a._wrapped;
+    if (b._chain) b = b._wrapped;
+    // Invoke a custom `isEqual` method if one is provided.
+    if (a.isEqual && _.isFunction(a.isEqual)) return a.isEqual(b);
+    if (b.isEqual && _.isFunction(b.isEqual)) return b.isEqual(a);
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className != toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, dates, and booleans are compared by value.
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return a == String(b);
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive. An `egal` comparison is performed for
+        // other numeric values.
+        return a != +a ? b != +b : (a == 0 ? 1 / a == 1 / b : a == +b);
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a == +b;
+      // RegExps are compared by their source patterns and flags.
+      case '[object RegExp]':
+        return a.source == b.source &&
+               a.global == b.global &&
+               a.multiline == b.multiline &&
+               a.ignoreCase == b.ignoreCase;
+    }
+    if (typeof a != 'object' || typeof b != 'object') return false;
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+    var length = stack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (stack[length] == a) return true;
+    }
+    // Add the first object to the stack of traversed objects.
+    stack.push(a);
+    var size = 0, result = true;
+    // Recursively compare objects and arrays.
+    if (className == '[object Array]') {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      size = a.length;
+      result = size == b.length;
+      if (result) {
+        // Deep compare the contents, ignoring non-numeric properties.
+        while (size--) {
+          // Ensure commutative equality for sparse arrays.
+          if (!(result = size in a == size in b && eq(a[size], b[size], stack))) break;
+        }
+      }
+    } else {
+      // Objects with different constructors are not equivalent.
+      if ('constructor' in a != 'constructor' in b || a.constructor != b.constructor) return false;
+      // Deep compare objects.
+      for (var key in a) {
+        if (_.has(a, key)) {
+          // Count the expected number of properties.
+          size++;
+          // Deep compare each member.
+          if (!(result = _.has(b, key) && eq(a[key], b[key], stack))) break;
+        }
+      }
+      // Ensure that both objects contain the same number of properties.
+      if (result) {
+        for (key in b) {
+          if (_.has(b, key) && !(size--)) break;
+        }
+        result = !size;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    stack.pop();
+    return result;
+  }
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b, []);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (_.isArray(obj) || _.isString(obj)) return obj.length === 0;
+    for (var key in obj) if (_.has(obj, key)) return false;
+    return true;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType == 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) == '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    return obj === Object(obj);
+  };
+
+  // Is a given variable an arguments object?
+  _.isArguments = function(obj) {
+    return toString.call(obj) == '[object Arguments]';
+  };
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return !!(obj && _.has(obj, 'callee'));
+    };
+  }
+
+  // Is a given value a function?
+  _.isFunction = function(obj) {
+    return toString.call(obj) == '[object Function]';
+  };
+
+  // Is a given value a string?
+  _.isString = function(obj) {
+    return toString.call(obj) == '[object String]';
+  };
+
+  // Is a given value a number?
+  _.isNumber = function(obj) {
+    return toString.call(obj) == '[object Number]';
+  };
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return _.isNumber(obj) && isFinite(obj);
+  };
+
+  // Is the given value `NaN`?
+  _.isNaN = function(obj) {
+    // `NaN` is the only value for which `===` is not reflexive.
+    return obj !== obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) == '[object Boolean]';
+  };
+
+  // Is a given value a date?
+  _.isDate = function(obj) {
+    return toString.call(obj) == '[object Date]';
+  };
+
+  // Is the given value a regular expression?
+  _.isRegExp = function(obj) {
+    return toString.call(obj) == '[object RegExp]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Has own property?
+  _.has = function(obj, key) {
+    return hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iterators.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Run a function **n** times.
+  _.times = function (n, iterator, context) {
+    for (var i = 0; i < n; i++) iterator.call(context, i);
+  };
+
+  // Escape a string for HTML interpolation.
+  _.escape = function(string) {
+    return (''+string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;').replace(/\//g,'&#x2F;');
+  };
+
+  // If the value of the named property is a function then invoke it;
+  // otherwise, return it.
+  _.result = function(object, property) {
+    if (object == null) return null;
+    var value = object[property];
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Add your own custom functions to the Underscore object, ensuring that
+  // they're correctly added to the OOP wrapper as well.
+  _.mixin = function(obj) {
+    each(_.functions(obj), function(name){
+      addToWrapper(name, _[name] = obj[name]);
+    });
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = idCounter++;
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /.^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    '\\': '\\',
+    "'": "'",
+    'r': '\r',
+    'n': '\n',
+    't': '\t',
+    'u2028': '\u2028',
+    'u2029': '\u2029'
+  };
+
+  for (var p in escapes) escapes[escapes[p]] = p;
+  var escaper = /\\|'|\r|\n|\t|\u2028|\u2029/g;
+  var unescaper = /\\(\\|'|r|n|t|u2028|u2029)/g;
+
+  // Within an interpolation, evaluation, or escaping, remove HTML escaping
+  // that had been previously added.
+  var unescape = function(code) {
+    return code.replace(unescaper, function(match, escape) {
+      return escapes[escape];
+    });
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  _.template = function(text, data, settings) {
+    settings = _.defaults(settings || {}, _.templateSettings);
+
+    // Compile the template source, taking care to escape characters that
+    // cannot be included in a string literal and then unescape them in code
+    // blocks.
+    var source = "__p+='" + text
+      .replace(escaper, function(match) {
+        return '\\' + escapes[match];
+      })
+      .replace(settings.escape || noMatch, function(match, code) {
+        return "'+\n_.escape(" + unescape(code) + ")+\n'";
+      })
+      .replace(settings.interpolate || noMatch, function(match, code) {
+        return "'+\n(" + unescape(code) + ")+\n'";
+      })
+      .replace(settings.evaluate || noMatch, function(match, code) {
+        return "';\n" + unescape(code) + "\n;__p+='";
+      }) + "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __p='';" +
+      "var print=function(){__p+=Array.prototype.join.call(arguments, '')};\n" +
+      source + "return __p;\n";
+
+    var render = new Function(settings.variable || 'obj', '_', source);
+    if (data) return render(data, _);
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled function source as a convenience for build time
+    // precompilation.
+    template.source = 'function(' + (settings.variable || 'obj') + '){\n' +
+      source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function, which will delegate to the wrapper.
+  _.chain = function(obj) {
+    return _(obj).chain();
+  };
+
+  // The OOP Wrapper
+  // ---------------
+
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+  var wrapper = function(obj) { this._wrapped = obj; };
+
+  // Expose `wrapper.prototype` as `_.prototype`
+  _.prototype = wrapper.prototype;
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(obj, chain) {
+    return chain ? _(obj).chain() : obj;
+  };
+
+  // A method to easily add functions to the OOP wrapper.
+  var addToWrapper = function(name, func) {
+    wrapper.prototype[name] = function() {
+      var args = slice.call(arguments);
+      unshift.call(args, this._wrapped);
+      return result(func.apply(_, args), this._chain);
+    };
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    wrapper.prototype[name] = function() {
+      var wrapped = this._wrapped;
+      method.apply(wrapped, arguments);
+      var length = wrapped.length;
+      if ((name == 'shift' || name == 'splice') && length === 0) delete wrapped[0];
+      return result(wrapped, this._chain);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    wrapper.prototype[name] = function() {
+      return result(method.apply(this._wrapped, arguments), this._chain);
+    };
+  });
+
+  // Start chaining a wrapped Underscore object.
+  wrapper.prototype.chain = function() {
+    this._chain = true;
+    return this;
+  };
+
+  // Extracts the result from a wrapped and chained object.
+  wrapper.prototype.value = function() {
+    return this._wrapped;
+  };
+
+}).call(this);
 /**
  * TeledrawCanvas.util
  */
@@ -547,7 +1699,7 @@ Events = (function () {
 	
 	// returns the opposite color. I think?
 	Util.opposite = function (color) {
-		if (!$.isArray(color)) {
+		if (!_.isArray(color)) {
 			color = Util.parseColorString(color);
 		}
 		var hsl = Util.rgb2hsl(color);
@@ -733,6 +1885,33 @@ Events = (function () {
 })(TeledrawCanvas);
 
 
+// requestAnimationFrame polyfill by Erik Möller
+// fixes from Paul Irish and Tino Zijdel
+(function() {
+	var lastTime = 0;
+	var vendors = ['ms', 'moz', 'webkit', 'o'];
+	for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+		window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+		window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] 
+								   || window[vendors[x]+'CancelRequestAnimationFrame'];
+	}
+ 
+	if (!window.requestAnimationFrame) {
+		window.requestAnimationFrame = function(callback, element) {
+			var currTime = new Date().getTime();
+			var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+			var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
+			  timeToCall);
+			lastTime = currTime + timeToCall;
+			return id;
+		};
+	}
+	if (!window.cancelAnimationFrame) {
+		window.cancelAnimationFrame = function(id) {
+			clearTimeout(id);
+		};
+	}
+}());
 (function (TeledrawCanvas) {
 	TeledrawCanvas.canvases = [];
 	var _id = 0;
@@ -764,6 +1943,9 @@ Events = (function () {
 		// related note: safari has trouble with high values for shadowOffset
 		shadowOffset: 5000,
 		
+		enableZoom: false,
+		enableWacomSupport: true,
+		
 		// default limits
 		maxHistory: 10,
 		minStrokeSize: 500,
@@ -773,24 +1955,53 @@ Events = (function () {
 		maxZoom: 8 // (8 == 800%)
 	};
 	
-	var Canvas = Canvas || function (w, h) {
+	var wacomPlugin;
+    
+    function embedWacomObject() {
+    	if (!wacomPlugin) {
+    		var plugin;
+    		if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
+    			plugin = document.createElement('embed');
+    			plugin.name = plugin.id = 'wacom-plugin';
+    			plugin.type = 'application/x-wacomtabletplugin';
+    		} else {
+    			plugin = document.createElement('object');
+    			plugin.classid = 'CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308';
+				plugin.codebase = "fbWacomTabletPlugin.cab";
+    		}
+    		
+			plugin.style.width = plugin.style.height = '1px';
+			plugin.style.top = plugin.style.left = '-10000px';
+			plugin.style.position = 'absolute';
+    		document.body.appendChild(plugin);
+    		wacomPlugin = plugin;
+    	}
+    }
+
+	
+	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
-		c.width = w; c.height = h;
+		if (w) c.width = w;
+		if (h) c.height = h;
 		return c;
 	};
 	
 	var API = function (elt, options) {
 		var self = this,
-			element = self.element = $(elt),
-			state = self.state = $.extend({}, defaultState, options);
+			element = self.element = elt.getContext ? elt : document.getElementById(elt);
+			state = self.state = _.extend({}, defaultState, options);
 		
-		if (typeof element.get(0).getContext != 'function') {
-			alert('Your browser does not support HTML canvas!');
-			return;
+		if (typeof (new Canvas()).getContext != 'function') {
+			throw new Error('Your browser does not support HTML canvas!');
+			return false;
 		}
 		
-		state.width = state.displayWidth || state.width || parseInt(element.attr('width'));
-		state.height = state.displayHeight || state.height || parseInt(element.attr('height'));
+		if (state.enableWacomSupport) {
+			embedWacomObject();
+		}
+		
+		element.width = state.width = state.displayWidth || state.width || element.width;
+		element.height = state.height = state.displayHeight || state.height || element.height;
 		state.fullWidth = state.fullWidth || state.width;
 		state.fullHeight = state.fullHeight || state.height;
 		
@@ -800,82 +2011,71 @@ Events = (function () {
 			state.fullHeight = state.fullWidth * state.height / state.width;
 		}
 		
-		element.attr({
-			width: state.width,
-			height: state.height
-		});
-		
-		self._displayCanvas = $(element).get(0);
-		
-		self._canvas = new Canvas(state.fullWidth, state.fullHeight);
-		
-		self.history = new TeledrawCanvas.History(this);
+		self._displayCanvas = element;
+		if (state.enableZoom) {
+			self._canvas = new Canvas(state.fullWidth, state.fullHeight);
+		} else {
+			self._canvas = element;
+		}
+		self.history = new TeledrawCanvas.History(self);
 		
 		self.defaults();
 		self.zoom(0);
 		self.history.checkpoint();
 		TeledrawCanvas.canvases[_id++] = self;
 		
-		var gInitZoom;
-		element.css({ width: state.width, height: state.height })
-			.bind('gesturestart', function (evt) {
-	    		if (state.tool.name == 'grab') {
-					gInitZoom = state.currentZoom;
-	    		}
-			})
-			.bind('gesturechange', function (evt) {
-	    		if (state.tool.name == 'grab') {
-	    			var pt = state.last;//$.extend({},state.last);
-	    			self.zoom(gInitZoom*evt.originalEvent.scale, pt.xd, pt.yd);
-	    		}
-	    		evt.preventDefault();
-			})
-			.bind('gestureend', function (evt) {
-			})
-			.bind('dblclick', function (evt) {
-				var pt = getCoord(evt);
-	            state.tool.dblclick(pt);
-			})
-			.bind('mouseenter', function (evt) {
-	            var pt = getCoord(evt);
-	            state.tool.enter(state.mouseDown, pt);
-	            state.last = pt;
-	            state.mouseOver = TRUE;
-	        })      
-	        .bind('mousedown touchstart', mouseDown)
-	        .bind('mouseleave', function (evt) {
-	            var pt = getCoord(evt);
-	            state.tool.leave(state.mouseDown, pt);
-	            state.mouseOver = FALSE;
-	        });
-        
-        
-	    $(window).bind('mousemove touchmove', mouseMove);
+		var gInitZoom, lastMoveEvent = NULL;
+		addEvent(element, 'gesturestart', gestureStart);
+		addEvent(element, 'gesturechange', gestureChange);
+		addEvent(element, 'gestureend', gestureEnd);
+		addEvent(element, 'dblclick', dblClick);
+		addEvent(element, 'mouseenter', mouseEnter); 
+		addEvent(element, 'mousedown', mouseDown);    
+		addEvent(element, 'touchstart', mouseDown);
+		addEvent(element, 'mouseleave', mouseLeave);
+	    addEvent(window, 'mousemove', mouseMove);        
+	    addEvent(window, 'touchmove', mouseMove);
 	   
-	    var lastMoveEvent = null;
+		function mouseEnter(evt) {
+			var pt = getCoord(evt);
+			state.tool.enter(state.mouseDown, pt);
+			state.last = pt;
+			state.mouseOver = TRUE;
+		}
+		
+		function mouseLeave(evt) {
+			var pt = getCoord(evt);
+			state.tool.leave(state.mouseDown, pt);
+			state.mouseOver = FALSE;
+		}
+		
+		function dblClick(evt) {
+			var pt = getCoord(evt);
+			state.tool.dblclick(pt);
+		}
+		
 	    function mouseMove(e) {
-	    	if (e.type == 'touchmove' && e.originalEvent.touches.length > 1) {
+	    	if (e.type == 'touchmove' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
-	    	target = $(e.target).parents().andSelf();
-	        if (target.is(element) || state.mouseDown) {
+	        if (e.target == element || state.mouseDown) {
 	        	var pt = getCoord(e);
 				state.tool.move(state.mouseDown, state.last, pt);
 				state.last = pt;
 				self.trigger('mousemove', pt, e);
 	            lastMoveEvent = e.type;
             	e.preventDefault();
+        		return FALSE;
 	        }
 	    }
 
 	    function mouseDown(e) {
             var pt = state.last = getCoord(e);
-	    	if (e.type == 'touchstart' && e.originalEvent.touches.length > 1) {
+	    	if (e.type == 'touchstart' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
-            $(window)
-                .one('mouseup touchend', mouseUp);
+            addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
 			state.tool.down(pt);
@@ -883,10 +2083,13 @@ Events = (function () {
 			
         	document.onselectstart = function() { return FALSE; };
         	e.preventDefault();
+        	return FALSE;
         }
 	    
 	    function mouseUp(e) {
-	    	if (e.type == 'touchend' && e.originalEvent.touches.length > 1) {
+            removeEvent(window, e.type === 'mouseup' ? 'mouseup' : 'touchend', mouseUp);
+            
+	    	if (e.type == 'touchend' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
 	    	
@@ -896,17 +2099,41 @@ Events = (function () {
         
         	document.onselectstart = function() { return TRUE; };
         	e.preventDefault();
+        	return FALSE;
 	    }
 	    
+	    function gestureStart(evt) {
+			if (state.tool.name == 'grab') {
+				gInitZoom = state.currentZoom;
+			}
+		}
+		
+		function gestureChange(evt) {
+			if (state.tool.name == 'grab') {
+				var pt = state.last;
+				self.zoom(gInitZoom*evt.scale, pt.xd, pt.yd);
+			}
+			evt.preventDefault();
+        	return FALSE;
+		}
+		
+		function gestureEnd(evt) {
+		
+		}
+	    
 		function getCoord(e) {
-	        var offset = element.offset(),
-		        pageX = e.pageX || e.originalEvent.touches && e.originalEvent.touches[0].pageX,
-				pageY = e.pageY || e.originalEvent.touches && e.originalEvent.touches[0].pageY;
+	        var left = element.offsetLeft,
+	        	top = element.offsetTop,
+	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
+				pageY = e.pageY || e.touches && e.touches[0].pageY,
+				pressure = wacomPlugin && wacomPlugin.penAPI ? wacomPlugin.penAPI.pressure : null;
+
 	        return {
-	        	x: floor((pageX - offset.left)/state.currentZoom) + state.currentOffset.x || 0,
-	        	y: floor((pageY - offset.top)/state.currentZoom) + state.currentOffset.y || 0,
-	        	xd: floor(pageX - offset.left) || 0,
-	        	yd: floor(pageY - offset.top) || 0
+	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
+	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
+	        	xd: floor(pageX - left) || 0,
+	        	yd: floor(pageY - top) || 0,
+	        	p: pressure
 	        };
 		}
 	};
@@ -934,13 +2161,16 @@ Events = (function () {
 	};
 	
 	APIprototype.updateDisplayCanvas = function () {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom, 
 			dw = dctx.canvas.width,
 			dh = dctx.canvas.height,
-			sw = dw / zoom,
-			sh = dh / zoom;
+			sw = floor(dw / zoom),
+			sh = floor(dh / zoom);
 		dctx.clearRect(0, 0, dw, dh);
 		this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
@@ -991,8 +2221,8 @@ Events = (function () {
 	    var cursors = c.split(/,\s*/);
 	    do {
 	    	c = cursors.shift();
-	    	this.element.css('cursor', c);
-	    } while (c.length && this.element.css('cursor') != c);
+	    	this.element.style.cursor = c;
+	    } while (c.length && this.element.style.cursor != c);
 	    return this;
 	};
 	
@@ -1028,10 +2258,7 @@ Events = (function () {
 			x = x !== UNDEFINED ? x : 0;
 			y = y !== UNDEFINED ? y : 0;
 			
-			var tmpcanvas = $('<canvas>').attr({
-				width: w,
-				height: h
-			}).get(0);
+			var tmpcanvas = this.getTempCanvas(w, h);
 			tmpcanvas.getContext('2d').drawImage(this.canvas(), x, y, w, h, 0, 0, w, h);
 			return tmpcanvas.toDataURL();
 		}
@@ -1040,14 +2267,11 @@ Events = (function () {
 	
 	// returns a new (blank) canvas element the same size as this tdcanvas element
 	APIprototype.getTempCanvas = function (w, h) {
-		var tmp = $('<canvas>').get(0);
-		tmp.width = w || this._canvas.width;
-		tmp.height = h || this._canvas.height;
-		return tmp;
+		return new Canvas(w || this._canvas.width, h || this._canvas.height);
 	};
 
 	// draws an image data url to the canvas and when it's finished, calls the given callback function
-	APIprototype.fromDataURL = function (url, cb) {
+	APIprototype.fromDataURL = APIprototype.fromImageURL = function (url, cb) {
 		var self = this,
 			img = new Image();
 		img.onload = function () {
@@ -1082,7 +2306,7 @@ Events = (function () {
 	
 	// sets the current color, either as an array (see getColor) or any acceptable css color string
 	APIprototype.setColor = function (color) {
-		if (!$.isArray(color)) {
+		if (!_.isArray(color)) {
 			color = TeledrawCanvas.util.parseColorString(color);
 		}
 		this.setRGBAArrayColor(color);
@@ -1148,20 +2372,31 @@ Events = (function () {
 	// (throws an error if it's not the same aspect ratio as the source canvas)
 	// @todo/consider: release this constraint and just change the size of the source canvas?
 	APIprototype.resize = function (w, h) {
-		var self = this;
-		if (w/h !== self._canvas.width/self._canvas.height) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
+		var self = this,
+			ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
+			ar1 = Math.round(w/h*100)/100;
+		if (ar0 !== ar1) {
 			throw new Error('Not the same aspect ratio!');
 		}
-		self._displayCanvas.width = w;
-		self._displayCanvas.height = h;
-		self.updateDisplayCanvas();
-		return self;
+		self._displayCanvas.width = self.state.width = w;
+		self._displayCanvas.height = self.state.height = h;
+		return self.zoom(self.state.currentZoom);
 	};
 	
 	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
 	// optionally at a given point (in display canvas coordinates)
 	// otherwise in the center of the current display
+	// if no arguments are specified, returns the current zoom level
 	APIprototype.zoom = function (z, x, y) {
+		if (arguments.length === 0) {
+			return this.state.currentZoom;
+		}
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			panx = 0, 
 			pany = 0,
@@ -1175,6 +2410,8 @@ Events = (function () {
 		
 		// restrict the zoom
 		z = clamp(z || 0, displayWidth / self._canvas.width, self.state.maxZoom);
+		
+		// figure out where to zoom at
 		if (z !== currentZoom) {
 			if (z > currentZoom) {
 				// zooming in
@@ -1188,7 +2425,6 @@ Events = (function () {
 			panx *= z;
 			pany *= z;
 		}
-		//console.log(panx, pany);
 		self.state.currentZoom = z;
 		self.trigger('zoom', z, currentZoom);
 		self.pan(panx, pany);
@@ -1198,28 +2434,36 @@ Events = (function () {
 	
 	// pan the canvas to the given (relative) x,y position
 	// unless absolute === TRUE
+	// if no arguments are specified, returns the current absolute position
 	APIprototype.pan = function (x, y, absolute) {
+		if (arguments.length === 0) {
+			return this.state.currentOffset;
+		}
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			zoom = self.state.currentZoom,
 			currentX = self.state.currentOffset.x,
 			currentY = self.state.currentOffset.y,
-			maxWidth = self._canvas.width - self._displayCanvas.width/zoom,
-			maxHeight = self._canvas.height - self._displayCanvas.height/zoom;
+			maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
+			maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
 		x = absolute === TRUE ? x/zoom : currentX - (x || 0)/zoom;
 		y = absolute === TRUE ? y/zoom : currentY - (y || 0)/zoom;
-		self.state.currentOffset = {
-			x: floor(clamp(x, 0, maxWidth)),
-			y: floor(clamp(y, 0, maxHeight))
-		};
-		self.trigger('pan', x, y);
+		x = floor(clamp(x, 0, maxWidth));
+		y = floor(clamp(y, 0, maxHeight))
+		self.state.currentOffset = { x: x, y: y };
+		self.trigger('pan', self.state.currentOffset);
 		self.updateDisplayCanvas();
 		return self;
 	};
 	
 	// events mixin
-	$.extend(APIprototype, Events);
+	_.extend(APIprototype, Events);
 	TeledrawCanvas.api = API;
 })(TeledrawCanvas);
+
+
 /**
  * TeledrawCanvas.History
  */
@@ -1587,15 +2831,17 @@ Events = (function () {
  */
 (function (TeledrawCanvas) {
 	var ctor = function () {
-		this.previewContainer = $('<div>').css({
+		this.previewContainer = document.createElement('div');
+		_.extend(this.previewContainer.style, {
 			position: 'absolute',
-			width: 10,
-			height: 10,
-			border: '1px solid black'
+			width: '10px',
+			height: '10px',
+			border: '1px solid black',
+			display: 'none'
 		});
-		$('body').append(this.previewContainer.hide());
+		document.body.appendChild(this.previewContainer);
 		if (this.canvas.state.mouseOver) {
-			this.previewContainer.show();
+			this.previewContainer.style.display = 'block';
 		}
 	};
 	var EyeDropper = TeledrawCanvas.Tool.createTool("eyedropper", "crosshair", ctor);
@@ -1603,31 +2849,33 @@ Events = (function () {
 	EyeDropper.prototype.pick = function (pt) {
 		var previewContainer = this.previewContainer,
 			lightness,
-			off = this.canvas.element.offset(),
+			left = this.canvas.element.offsetLeft,
+			top = this.canvas.element.offsetTop,
 			pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
 		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
-		this.previewContainer.offset({ left: off.left + pt.xd + 15, top: off.top + pt.yd + 5});
 		var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
-		previewContainer.css({
-			'background': TeledrawCanvas.util.cssColor(this.color),
+		_.extend(previewContainer.style, {
+			left: (left + pt.xd + 15) + 'px', 
+			top: (top + pt.yd + 5) + 'px',
+			background: TeledrawCanvas.util.cssColor(this.color),
 			'border-color': lightness >= 50 ? '#000' : '#888'
 		});
 		if (this.canvas.state.mouseOver) {
 			// hack for chrome, since it seems to ignore this and not redraw for some reason...
-			previewContainer[0].style.display='none';
-			previewContainer[0].offsetHeight; // no need to store this anywhere, the reference is enough
-			previewContainer[0].style.display='block';
+			previewContainer.style.display='none';
+			previewContainer.offsetHeight; // no need to store this anywhere, the reference is enough
+			previewContainer.style.display='block';
 		} else {
-			previewContainer.hide();
+			previewContainer.style.display = 'none';
 		}
 	};
 
 	EyeDropper.prototype.enter = function () {
-		this.previewContainer.show();
+		this.previewContainer.style.display = 'block';
 	};
 	
 	EyeDropper.prototype.leave = function () {
-		this.previewContainer.hide();
+		this.previewContainer.style.display = 'none';
 	};
 	
 	EyeDropper.prototype.move = function (down, from, pt) {
@@ -1641,7 +2889,7 @@ Events = (function () {
 	EyeDropper.prototype.up = function (pt) {
 	    this.pick(pt);
 		this.canvas.setColor(this.color);
-		this.previewContainer.remove();
+		this.previewContainer.parentNode.removeChild(this.previewContainer);
 		this.canvas.previousTool();
 	};
 })(TeledrawCanvas);
@@ -1665,7 +2913,7 @@ Events = (function () {
 		var color = this.color;
 		color[3]*=0xFF;
 		floodFillScanlineStack(pixels.data, fill_mask.data, target, w, h, this.color);
-		this.tmp_canvas = $('<canvas>').attr({width: w, height: h}).get(0);
+		this.tmp_canvas = this.canvas.getTempCanvas();
 		var tmp_ctx = this.tmp_canvas.getContext('2d');
 		tmp_ctx.putImageData(fill_mask, 0, 0);
 		
@@ -1816,34 +3064,7 @@ Events = (function () {
 	    }
 	}
 })(TeledrawCanvas);
-
-// requestAnimationFrame polyfill by Erik Möller
-// fixes from Paul Irish and Tino Zijdel
-(function() {
-	var lastTime = 0;
-	var vendors = ['ms', 'moz', 'webkit', 'o'];
-	for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
-		window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
-		window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] 
-								   || window[vendors[x]+'CancelRequestAnimationFrame'];
-	}
- 
-	if (!window.requestAnimationFrame) {
-		window.requestAnimationFrame = function(callback, element) {
-			var currTime = new Date().getTime();
-			var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-			var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
-			  timeToCall);
-			lastTime = currTime + timeToCall;
-			return id;
-		};
-	}
-	if (!window.cancelAnimationFrame) {
-		window.cancelAnimationFrame = function(id) {
-			clearTimeout(id);
-		};
-	}
-}());/**
+/**
  * Line tool
  */
 (function (TeledrawCanvas) {
@@ -1871,8 +3092,8 @@ Events = (function () {
 
 	Line.stroke.prototype.draw = function () {
 	    if (!this.first || !this.second) return;
-	    var first = $.extend({}, this.first),
-	    	second = $.extend({}, this.second),
+	    var first = _.extend({}, this.first),
+	    	second = _.extend({}, this.second),
 	    	a, x, y, pi = Math.PI;
 	    if (this.tool.shiftKey) {
 	    	x = second.x - first.x;
@@ -1916,9 +3137,6 @@ Events = (function () {
 		var state = this.canvas.state,
 			ctx = this.ctx,
 			points = this.points,
-			prev,
-			prevprev,
-			curr,
 			shadowOffset = state.shadowOffset,
 			shadowBlur = state.shadowBlur,
 			lineWidth = state.lineWidth,
@@ -1939,6 +3157,9 @@ Events = (function () {
 			switch (this.lineCap) {
 				case 'round':
 					ctx.beginPath();
+					if (points[0].p) {
+						lineWidth *= points[0].p;
+					}
 					ctx.arc(points[0].x, points[0].y, lineWidth / 2, 0, 2 * Math.PI, true);
 					ctx.closePath();
 					ctx.fill();
@@ -1951,34 +3172,165 @@ Events = (function () {
 	        ctx.lineCap = this.lineCap;
 	        ctx.lineWidth = lineWidth;
 	    
-	        ctx.beginPath();
-	        ctx.moveTo(points[0].x, points[0].y);
-			prev = points[0];
-			prevprev = null;
-	        for (var i = 1; i < points.length; ++i) {
-	        	curr = points[i];
-	        	if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
-	        		// hack to avoid weird linejoins cutting the line
-	        		curr.x += 0.1; curr.y += 0.1;
-	        	}
-	            if (this.smoothing) {
-	           		var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
-	         		ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
-	            } else {
-	            	ctx.lineTo(curr.x, curr.y);
-	            }
-	            prevprev = prev;
-	            prev = points[i];
-	        }
-	        if (this.smoothing) {
-	       		ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
-	        }
-	        ctx.stroke();
+	    	if (points[0].p) {
+				var pressurePoints = generatePressurePoints(points, lineWidth);
+				var length = pressurePoints.left.length;
+	    		pressurePoints.right.reverse();
+	    		
+				ctx.beginPath();
+	    		drawLine(ctx, pressurePoints.left, this.smoothing);
+	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);
+	    		drawLine(ctx, pressurePoints.right, this.smoothing);
+	    		ctx.lineTo(pressurePoints.left[0].x, pressurePoints.left[0].y);
+	    		ctx.closePath();
+	    		ctx.fill();
+	    		
+	    		/*
+	    		ctx.beginPath();
+	    		var pt2 = new Vector(pressurePoints.right[0].x,pressurePoints.right[0].y),
+	    			pt1 = new Vector(pressurePoints.left[length-1].x,pressurePoints.left[length-1].y);
+	    		var pt = points[points.length-2];
+	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
+	    		ctx.closePath();
+	    		ctx.fill();
+
+	    		
+				ctx.beginPath();
+	    		pt1 = new Vector(pressurePoints.right[length-1].x,pressurePoints.right[length-1].y);
+	    		pt2 = new Vector(pressurePoints.left[0].x,pressurePoints.left[0].y);
+	    		pt = points[0];
+	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
+	    		ctx.closePath();
+	    		ctx.fill();*/
+	    	} else {
+				ctx.beginPath();
+				drawLine(ctx, points, this.smoothing);
+				ctx.stroke();
+			}
 	    }
 	};
+	
+	function generatePressurePoints(points, thickness) {
+		var result = {left:[], right:[]},
+			len = points.length,
+			lastp = points[0],
+			lastv = new Vector(lastp.x, lastp.y), 
+			currp, currv, tmp;
+		for (var i = 1, l = len; i < l; ++i) {
+			currp = points[i];
+			currv = new Vector(currp.x, currp.y);
+			tmp = Vector.subtract(currv, lastv);
+			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
+			result.left.push({ x: tmp.x, y: tmp.y });
+			tmp = Vector.subtract(currv, lastv);
+			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
+			result.right.push({ x: tmp.x, y: tmp.y });
+			lastp = currp;
+			lastv = currv;
+		}
+		return result;
+	}
+	
+	function drawLine(ctx, points, smoothing) {
+	    ctx.moveTo(points[0].x, points[0].y);
+		var prev = points[0],
+			prevprev = null, curr = prev, len = points.length;
+		for (var i = 1, l = len; i < l; ++i) {
+			curr = points[i];
+			if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
+				// hack to avoid weird linejoins cutting the line
+				curr.x += 0.1; curr.y += 0.1;
+			}
+			if (smoothing) {
+				var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
+				ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
+			} else {
+				ctx.lineTo(curr.x, curr.y);
+			}
+			prevprev = prev;
+			prev = points[i];
+		}
+		if (smoothing) {
+			ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+		}
+	}
 })(TeledrawCanvas);
 
-/**
+
+function Vector(x, y, z) {
+	this.x = x || 0;
+	this.y = y || 0;
+	this.z = z || 0;
+}
+Vector.prototype.add = function (v) {
+	this.x += v.x;
+	this.y += v.y;
+	this.z += v.z;
+	return this;
+};
+Vector.prototype.scale = function (s) {
+	this.x *= s;
+	this.y *= s;
+	this.z *= s;
+	return this;
+};
+Vector.prototype.direction = function () {
+	return Math.atan2(this.y, this.x);
+};
+Vector.prototype.magnitude = function () {
+	return Math.sqrt(this.x*this.x + this.y*this.y + this.z*this.z);
+};
+Vector.prototype.addToMagnitude = function (n) {
+	n = n || 0;
+	var mag = this.magnitude();
+	var magTransformation = Math.sqrt((n + mag) / mag);
+	this.x *= magTransformation;
+	this.y *= magTransformation;
+	this.z *= magTransformation;
+	return this;
+};
+Vector.prototype.unit = function () {
+	return this.scale(1/this.magnitude());
+};
+Vector.prototype.rotateZ = function (t) {
+	var oldX = this.x;
+	var oldY = this.y;
+	this.x = oldX*Math.cos(t) - oldY*Math.sin(t);
+	this.y = oldX*Math.sin(t) + oldY*Math.cos(t);
+	return this;
+};
+Vector.add = function (v1, v2) {
+	return new Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+};
+Vector.subtract = function (v1, v2) {
+	return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+};
+Vector.dot = function (v1, v2) {
+	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+};
+Vector.scale = function (v, s) {
+	return new Vector(v.x * s, v.y * s, v.z * s);
+};
+Vector.cross = function (v1, v2) {
+	return new Vector(
+		v1.y * v2.z - v2.y * v1.z, 
+		v1.z * v2.x - v2.z * v1.x, 
+		v1.x * v2.y - v2.x * v1.y
+	);
+};
+Vector.average = function () {
+	var num, result = new Vector(), items = arguments;
+	if (arguments[0].constructor.toString().indexOf('Array') != -1)
+		items = arguments[0];
+	num = items.length;
+	for (i = 0; i < num;i++) {
+		result.add(Vector.create(items[i]));
+	}
+	return result.scale(1/num);
+};
+Vector.create = function (o) {
+	return new Vector(o.x, o.y, o.z);
+};/**
  * Rectangle tool
  */
 (function (TeledrawCanvas) {
@@ -2006,7 +3358,7 @@ Events = (function () {
 	Rectangle.stroke.prototype.draw = function () {
 	    if (!this.first || !this.second) return;
 	    var first = this.first,
-	    	second = $.extend({}, this.second),
+	    	second = _.extend({}, this.second),
 	    	ctx = this.ctx,
 	    	state = this.canvas.state,
 			shadowOffset = state.shadowOffset,
