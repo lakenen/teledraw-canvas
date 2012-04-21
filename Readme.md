@@ -1,6 +1,6 @@
 # Teledraw Canvas
 
-Teledraw Canvas is an HTML5 Canvas drawing engine that is used in [Teledraw.com](http://teledraw.com/). It is currently dependent on jQuery (1.5+).
+Teledraw Canvas is an HTML5 Canvas drawing engine that is used in [Teledraw.com](http://teledraw.com/). It is currently dependent on [Underscore.js](http://documentcloud.github.com/underscore/) (1.x.x).
 
 You can see a very basic live demo at [lakenen.com/teledraw-canvas](http://lakenen.com/teledraw-canvas).
 
@@ -9,20 +9,37 @@ You can see a very basic live demo at [lakenen.com/teledraw-canvas](http://laken
 Include jQuery and teledraw-canvas.js in your page, and from there it's as simple as creating a canvas element with whatever width and height you want:
 
 ```html
-<canvas id="test-canvas" width="800" height="600"></canvas>
+<canvas id="test-canvas" width="512" height="512"></canvas>
 ```
 
 and initializing the TeledrawCanvas:
 
 ```js
-var canvas = new TeledrawCanvas('#test-canvas');
+var canvas = new TeledrawCanvas('test-canvas');
+
+// with options
+var canvas = new TeledrawCanvas('test-canvas', {
+	width: 512,
+	height: 512,
+	fullWidth: 1024,
+	fullHeight: 1024,
+	
+	maxHistory: 20,
+	minStrokeSize: 500,
+	maxStrokeSize: 10000,
+	minStrokeSoftness: 0,
+	maxStrokeSoftness: 100,
+	
+	enableZoom: true, // true by default
+	maxZoom: 8 // 800%
+});
 ```
 
 ## API
 
 ### Setting tool color
 
-Teledraw Canvas will accept any color string that works with CSS, as well as an array of RGBA values 0 to 255, (e.g. [255, 0, 0, 255] would be a fully opaque red).
+Teledraw Canvas will accept any color string that works with CSS, as well as an array of RGB(A) values 0 to 255 (A: 0-1), (e.g. [255, 0, 0, 1.0] would be a fully opaque red).
 
 ```js
 // by hex value
@@ -40,14 +57,14 @@ canvas.setColor('hsla(240, 100%, 50%, 0.5)');
 canvas.setColor('lightGoldenrodYellow');
 
 // by RGBA array
-canvas.setColor([255, 0, 0, 130]);
+canvas.setColor([255, 0, 0, 0.5]);
 
 // and so on...
 ```
 
 ### Picking a tool
 
-Currently, the only tools available are 'pencil' and 'eraser'. You can select them with `setTool`.
+Currently, the tools available are 'pencil', 'eraser', 'fill', 'rectangle', 'line', 'ellipse', 'eyedropper' and (if zoom is enabled) 'grab'. You can select them with `setTool`.
 
 ```js
 // pencil
@@ -56,7 +73,7 @@ canvas.setTool('pencil');
 // eraser
 canvas.setTool('eraser');
 
-// more to come!
+// etc
 ```
 
 ### Adjusting the stroke style
@@ -65,9 +82,9 @@ You can modify how the stroke looks, including opacity, size and softness.
 
 ```js
 // relatively small stroke
-canvas.setStrokeSize(1000);
+canvas.setStrokeSize(1);
 // relatively large stroke
-canvas.setStrokeSize(10000);
+canvas.setStrokeSize(100);
 
 // no softness
 canvas.setStrokeSoftness(0);
@@ -75,7 +92,7 @@ canvas.setStrokeSoftness(0);
 canvas.setStrokeSoftness(100);
 
 // fully opaque
-canvas.setAlpha(255);
+canvas.setAlpha(1);
 // fully transparent
 canvas.setAlpha(0);
 ```
@@ -124,11 +141,12 @@ var ctx = canvas.ctx();
 // returns a new (blank) canvas element the same size as this tdcanvas element
 var tmpCanvas = canvas.getTempCanvas();
 
-// returns a data url (image/png) of the canvas, optionally scaled to w x h pixels
-var dataURL = canvas.toDataURL(w, h);
+// returns a data url (image/png) of the canvas, optionally a portion of the canvas specified by x, y, w, h
+var dataURL = canvas.toDataURL(0, 0, 100, 100);
 
-// draw an image data url to the canvas and when it's finished, calls the given
+// draw an image to the canvas and when it's finished, calls the given
 // callback function (with `this` as the TeledrawCanvas Object)
+// this is also an alias for canvas.fromImageURL
 canvas.fromDataURL(url, function () { alert('done!'); });
 
 // get the ImageData of the canvas element

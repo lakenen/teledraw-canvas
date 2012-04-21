@@ -1,7 +1,7 @@
 /*!
 
-	Teledraw TeledrawCanvas
-	Version 0.9.0 (http://semver.org/)
+	Teledraw Canvas
+	Version 0.9.1 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
