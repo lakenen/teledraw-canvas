@@ -14,11 +14,14 @@
 		
 	</style>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+	<script type="text/javascript" src="jquery.mousewheel.js"></script>
 	<script type="text/javascript" src="teledraw-canvas.js"></script>
 	<script type="text/javascript">
 		var c;
 		$(function () {
 		
+			var grid = createGrid(1024, 512),
+				previewgrid =createGrid(1024, 512, 0.25);
 				
 				
 			c = TeledrawCanvas('test-canvas', {
@@ -26,9 +29,7 @@
 				fullHeight: 1024
 			});
 			
-			/*
-			var grid = createGrid(1024, 512),
-				previewgrid =createGrid(1024, 512, 0.25);
+			
 			c.on('display.update:after', function () {
 				// draw gridlines
 				var scanv = this.canvas();
@@ -125,7 +126,7 @@
 					$(window).unbind('mousemove touchmove', move);
 				});
 				event.preventDefault();
-			});*/
+			});
 		});
 	</script>
 
@@ -150,5 +151,6 @@
 	<button onclick="c.redo()">redo</button>
 	<button onclick="c.zoom(c.state.currentZoom*2)">zoom (+)</button>
 	<button onclick="c.zoom(c.state.currentZoom/2)">zoom (-)</button>
+
 </body>
 </html>

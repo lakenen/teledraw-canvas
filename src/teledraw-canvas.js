@@ -14,14 +14,14 @@
 	
 	// global default state
 	var defaultState = {
-		last: null,
-		currentTool: 'pencil',
-		previousTool: 'pencil',
-		tool: null,
+		last: NULL,
+		currentTool: NULL,
+		previousTool: NULL,
+		tool: NULL,
 		mouseDown: FALSE,
 		mouseOver: FALSE,
-		width: null,
-		height: null,
+		width: NULL,
+		height: NULL,
 		
 		currentZoom: 1,
 		currentOffset: { x: 0, y: 0 },
@@ -29,6 +29,9 @@
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		// related note: safari has trouble with high values for shadowOffset
 		shadowOffset: 5000,
+		
+		enableZoom: TRUE,
+		enableWacomSupport: TRUE,
 		
 		// default limits
 		maxHistory: 10,
@@ -38,6 +41,41 @@
 		maxStrokeSoftness: 100,
 		maxZoom: 8 // (8 == 800%)
 	};
+	
+	var wacomPlugin;
+    
+    function wacomEmbedObject() {
+    	if (!wacomPlugin) {
+    		var plugin;
+    		if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
+    			plugin = document.createElement('embed');
+    			plugin.name = plugin.id = 'wacom-plugin';
+    			plugin.type = 'application/x-wacomtabletplugin';
+    		} else {
+    			plugin = document.createElement('object');
+    			plugin.classid = 'CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308';
+				plugin.codebase = "fbWacomTabletPlugin.cab";
+    		}
+    		
+			plugin.style.width = plugin.style.height = '1px';
+			plugin.style.top = plugin.style.left = '-10000px';
+			plugin.style.position = 'absolute';
+    		document.body.appendChild(plugin);
+    		wacomPlugin = plugin;
+    	}
+    }
+    
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		return wacomPlugin.penAPI.pressure;
+    	}
+    }
+
+	function wacomIsEraser() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		return wacomPlugin.penAPI.pointerType === 3;
+    	}
+	}
 	
 	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
@@ -56,6 +94,10 @@
 			return false;
 		}
 		
+		if (state.enableWacomSupport) {
+			wacomEmbedObject();
+		}
+		
 		element.width = state.width = state.displayWidth || state.width || element.width;
 		element.height = state.height = state.displayHeight || state.height || element.height;
 		state.fullWidth = state.fullWidth || state.width;
@@ -68,9 +110,11 @@
 		}
 		
 		self._displayCanvas = element;
-		
-		self._canvas = new Canvas(state.fullWidth, state.fullHeight);
-		
+		if (state.enableZoom) {
+			self._canvas = new Canvas(state.fullWidth, state.fullHeight);
+		} else {
+			self._canvas = element;
+		}
 		self.history = new TeledrawCanvas.History(self);
 		
 		self.defaults();
@@ -132,6 +176,10 @@
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
+			if (wacomIsEraser() && state.currentTool !== 'eraser') {
+				self.setTool('eraser');
+				state.wacomWasEraser = true;
+			}
 			state.tool.down(pt);
 			self.trigger('mousedown', pt, e);
 			
@@ -150,6 +198,11 @@
 			state.mouseDown = FALSE;
 			state.tool.up(state.last);
 			self.trigger('mouseup', state.last, e);
+        	
+			if (state.wacomWasEraser === true) {
+				self.previousTool();
+				state.wacomWasEraser = false;
+			}
         
         	document.onselectstart = function() { return TRUE; };
         	e.preventDefault();
@@ -179,12 +232,15 @@
 	        var left = element.offsetLeft,
 	        	top = element.offsetTop,
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
-				pageY = e.pageY || e.touches && e.touches[0].pageY;
+				pageY = e.pageY || e.touches && e.touches[0].pageY,
+				pressure = wacomGetPressure();
+
 	        return {
 	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
 	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
 	        	xd: floor(pageX - left) || 0,
-	        	yd: floor(pageY - top) || 0
+	        	yd: floor(pageY - top) || 0,
+	        	p: pressure
 	        };
 		}
 	};
@@ -212,13 +268,16 @@
 	};
 	
 	APIprototype.updateDisplayCanvas = function (noTrigger) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom, 
 			dw = dctx.canvas.width,
 			dh = dctx.canvas.height,
-			sw = dw / zoom,
-			sh = dh / zoom;
+			sw = floor(dw / zoom),
+			sh = floor(dh / zoom);
 		dctx.clearRect(0, 0, dw, dh);
 		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
@@ -389,6 +448,9 @@
 	
 	// set the current tool, given the string name of the tool (e.g. 'pencil')
 	APIprototype.setTool = function (name) {
+		if (this.state.currentTool === name) {
+			return this;
+		}
 		this.state.previousTool = this.state.currentTool;
 		this.state.currentTool = name;
 		if (!TeledrawCanvas.tools[name]) {
@@ -420,6 +482,9 @@
 	// (throws an error if it's not the same aspect ratio as the source canvas)
 	// @todo/consider: release this constraint and just change the size of the source canvas?
 	APIprototype.resize = function (w, h) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
 			ar1 = Math.round(w/h*100)/100;
@@ -428,7 +493,6 @@
 		}
 		self._displayCanvas.width = self.state.width = w;
 		self._displayCanvas.height = self.state.height = h;
-		self.updateDisplayCanvas();
 		return self.zoom(self.state.currentZoom);
 	};
 	
@@ -439,6 +503,9 @@
 	APIprototype.zoom = function (z, x, y) {
 		if (arguments.length === 0) {
 			return this.state.currentZoom;
+		}
+		if (this.state.enableZoom === false) {
+			return this;
 		}
 		var self = this,
 			panx = 0, 
@@ -453,6 +520,8 @@
 		
 		// restrict the zoom
 		z = clamp(z || 0, displayWidth / self._canvas.width, self.state.maxZoom);
+		
+		// figure out where to zoom at
 		if (z !== currentZoom) {
 			if (z > currentZoom) {
 				// zooming in
@@ -466,7 +535,6 @@
 			panx *= z;
 			pany *= z;
 		}
-		//console.log(panx, pany);
 		self.state.currentZoom = z;
 		self.trigger('zoom', z, currentZoom);
 		self.pan(panx, pany);
@@ -481,19 +549,21 @@
 		if (arguments.length === 0) {
 			return this.state.currentOffset;
 		}
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			zoom = self.state.currentZoom,
 			currentX = self.state.currentOffset.x,
 			currentY = self.state.currentOffset.y,
-			maxWidth = self._canvas.width - self._displayCanvas.width/zoom,
-			maxHeight = self._canvas.height - self._displayCanvas.height/zoom;
+			maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
+			maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
 		x = absolute === TRUE ? x/zoom : currentX - (x || 0)/zoom;
 		y = absolute === TRUE ? y/zoom : currentY - (y || 0)/zoom;
-		self.state.currentOffset = {
-			x: floor(clamp(x, 0, maxWidth)),
-			y: floor(clamp(y, 0, maxHeight))
-		};
-		self.trigger('pan', x, y);
+		x = floor(clamp(x, 0, maxWidth));
+		y = floor(clamp(y, 0, maxHeight))
+		self.state.currentOffset = { x: x, y: y };
+		self.trigger('pan', self.state.currentOffset);
 		self.updateDisplayCanvas();
 		return self;
 	};

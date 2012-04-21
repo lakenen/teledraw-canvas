@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.7.2 (http://semver.org/)
+	Version 0.9.0 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -1927,14 +1927,14 @@ function contains(container, maybe) {
 	
 	// global default state
 	var defaultState = {
-		last: null,
-		currentTool: 'pencil',
-		previousTool: 'pencil',
-		tool: null,
+		last: NULL,
+		currentTool: NULL,
+		previousTool: NULL,
+		tool: NULL,
 		mouseDown: FALSE,
 		mouseOver: FALSE,
-		width: null,
-		height: null,
+		width: NULL,
+		height: NULL,
 		
 		currentZoom: 1,
 		currentOffset: { x: 0, y: 0 },
@@ -1942,6 +1942,9 @@ function contains(container, maybe) {
 		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
 		// related note: safari has trouble with high values for shadowOffset
 		shadowOffset: 5000,
+		
+		enableZoom: TRUE,
+		enableWacomSupport: TRUE,
 		
 		// default limits
 		maxHistory: 10,
@@ -1951,6 +1954,41 @@ function contains(container, maybe) {
 		maxStrokeSoftness: 100,
 		maxZoom: 8 // (8 == 800%)
 	};
+	
+	var wacomPlugin;
+    
+    function wacomEmbedObject() {
+    	if (!wacomPlugin) {
+    		var plugin;
+    		if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
+    			plugin = document.createElement('embed');
+    			plugin.name = plugin.id = 'wacom-plugin';
+    			plugin.type = 'application/x-wacomtabletplugin';
+    		} else {
+    			plugin = document.createElement('object');
+    			plugin.classid = 'CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308';
+				plugin.codebase = "fbWacomTabletPlugin.cab";
+    		}
+    		
+			plugin.style.width = plugin.style.height = '1px';
+			plugin.style.top = plugin.style.left = '-10000px';
+			plugin.style.position = 'absolute';
+    		document.body.appendChild(plugin);
+    		wacomPlugin = plugin;
+    	}
+    }
+    
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		return wacomPlugin.penAPI.pressure;
+    	}
+    }
+
+	function wacomIsEraser() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		return wacomPlugin.penAPI.pointerType === 3;
+    	}
+	}
 	
 	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
@@ -1969,6 +2007,10 @@ function contains(container, maybe) {
 			return false;
 		}
 		
+		if (state.enableWacomSupport) {
+			wacomEmbedObject();
+		}
+		
 		element.width = state.width = state.displayWidth || state.width || element.width;
 		element.height = state.height = state.displayHeight || state.height || element.height;
 		state.fullWidth = state.fullWidth || state.width;
@@ -1981,9 +2023,11 @@ function contains(container, maybe) {
 		}
 		
 		self._displayCanvas = element;
-		
-		self._canvas = new Canvas(state.fullWidth, state.fullHeight);
-		
+		if (state.enableZoom) {
+			self._canvas = new Canvas(state.fullWidth, state.fullHeight);
+		} else {
+			self._canvas = element;
+		}
 		self.history = new TeledrawCanvas.History(self);
 		
 		self.defaults();
@@ -2045,6 +2089,10 @@ function contains(container, maybe) {
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
+			if (wacomIsEraser() && state.currentTool !== 'eraser') {
+				self.setTool('eraser');
+				state.wacomWasEraser = true;
+			}
 			state.tool.down(pt);
 			self.trigger('mousedown', pt, e);
 			
@@ -2063,6 +2111,11 @@ function contains(container, maybe) {
 			state.mouseDown = FALSE;
 			state.tool.up(state.last);
 			self.trigger('mouseup', state.last, e);
+        	
+			if (state.wacomWasEraser === true) {
+				self.previousTool();
+				state.wacomWasEraser = false;
+			}
         
         	document.onselectstart = function() { return TRUE; };
         	e.preventDefault();
@@ -2092,12 +2145,15 @@ function contains(container, maybe) {
 	        var left = element.offsetLeft,
 	        	top = element.offsetTop,
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
-				pageY = e.pageY || e.touches && e.touches[0].pageY;
+				pageY = e.pageY || e.touches && e.touches[0].pageY,
+				pressure = wacomGetPressure();
+
 	        return {
 	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
 	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
 	        	xd: floor(pageX - left) || 0,
-	        	yd: floor(pageY - top) || 0
+	        	yd: floor(pageY - top) || 0,
+	        	p: pressure
 	        };
 		}
 	};
@@ -2125,13 +2181,16 @@ function contains(container, maybe) {
 	};
 	
 	APIprototype.updateDisplayCanvas = function (noTrigger) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom, 
 			dw = dctx.canvas.width,
 			dh = dctx.canvas.height,
-			sw = dw / zoom,
-			sh = dh / zoom;
+			sw = floor(dw / zoom),
+			sh = floor(dh / zoom);
 		dctx.clearRect(0, 0, dw, dh);
 		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
@@ -2302,6 +2361,9 @@ function contains(container, maybe) {
 	
 	// set the current tool, given the string name of the tool (e.g. 'pencil')
 	APIprototype.setTool = function (name) {
+		if (this.state.currentTool === name) {
+			return this;
+		}
 		this.state.previousTool = this.state.currentTool;
 		this.state.currentTool = name;
 		if (!TeledrawCanvas.tools[name]) {
@@ -2333,6 +2395,9 @@ function contains(container, maybe) {
 	// (throws an error if it's not the same aspect ratio as the source canvas)
 	// @todo/consider: release this constraint and just change the size of the source canvas?
 	APIprototype.resize = function (w, h) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
 			ar1 = Math.round(w/h*100)/100;
@@ -2341,7 +2406,6 @@ function contains(container, maybe) {
 		}
 		self._displayCanvas.width = self.state.width = w;
 		self._displayCanvas.height = self.state.height = h;
-		self.updateDisplayCanvas();
 		return self.zoom(self.state.currentZoom);
 	};
 	
@@ -2352,6 +2416,9 @@ function contains(container, maybe) {
 	APIprototype.zoom = function (z, x, y) {
 		if (arguments.length === 0) {
 			return this.state.currentZoom;
+		}
+		if (this.state.enableZoom === false) {
+			return this;
 		}
 		var self = this,
 			panx = 0, 
@@ -2366,6 +2433,8 @@ function contains(container, maybe) {
 		
 		// restrict the zoom
 		z = clamp(z || 0, displayWidth / self._canvas.width, self.state.maxZoom);
+		
+		// figure out where to zoom at
 		if (z !== currentZoom) {
 			if (z > currentZoom) {
 				// zooming in
@@ -2379,7 +2448,6 @@ function contains(container, maybe) {
 			panx *= z;
 			pany *= z;
 		}
-		//console.log(panx, pany);
 		self.state.currentZoom = z;
 		self.trigger('zoom', z, currentZoom);
 		self.pan(panx, pany);
@@ -2394,19 +2462,21 @@ function contains(container, maybe) {
 		if (arguments.length === 0) {
 			return this.state.currentOffset;
 		}
+		if (this.state.enableZoom === false) {
+			return this;
+		}
 		var self = this,
 			zoom = self.state.currentZoom,
 			currentX = self.state.currentOffset.x,
 			currentY = self.state.currentOffset.y,
-			maxWidth = self._canvas.width - self._displayCanvas.width/zoom,
-			maxHeight = self._canvas.height - self._displayCanvas.height/zoom;
+			maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
+			maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
 		x = absolute === TRUE ? x/zoom : currentX - (x || 0)/zoom;
 		y = absolute === TRUE ? y/zoom : currentY - (y || 0)/zoom;
-		self.state.currentOffset = {
-			x: floor(clamp(x, 0, maxWidth)),
-			y: floor(clamp(y, 0, maxHeight))
-		};
-		self.trigger('pan', x, y);
+		x = floor(clamp(x, 0, maxWidth));
+		y = floor(clamp(y, 0, maxHeight))
+		self.state.currentOffset = { x: x, y: y };
+		self.trigger('pan', self.state.currentOffset);
 		self.updateDisplayCanvas();
 		return self;
 	};
@@ -3090,9 +3160,6 @@ function contains(container, maybe) {
 		var state = this.canvas.state,
 			ctx = this.ctx,
 			points = this.points,
-			prev,
-			prevprev,
-			curr,
 			shadowOffset = state.shadowOffset,
 			shadowBlur = state.shadowBlur,
 			lineWidth = state.lineWidth,
@@ -3113,6 +3180,9 @@ function contains(container, maybe) {
 			switch (this.lineCap) {
 				case 'round':
 					ctx.beginPath();
+					if (points[0].p) {
+						lineWidth *= points[0].p;
+					}
 					ctx.arc(points[0].x, points[0].y, lineWidth / 2, 0, 2 * Math.PI, true);
 					ctx.closePath();
 					ctx.fill();
@@ -3125,34 +3195,165 @@ function contains(container, maybe) {
 	        ctx.lineCap = this.lineCap;
 	        ctx.lineWidth = lineWidth;
 	    
-	        ctx.beginPath();
-	        ctx.moveTo(points[0].x, points[0].y);
-			prev = points[0];
-			prevprev = null;
-	        for (var i = 1; i < points.length; ++i) {
-	        	curr = points[i];
-	        	if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
-	        		// hack to avoid weird linejoins cutting the line
-	        		curr.x += 0.1; curr.y += 0.1;
-	        	}
-	            if (this.smoothing) {
-	           		var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
-	         		ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
-	            } else {
-	            	ctx.lineTo(curr.x, curr.y);
-	            }
-	            prevprev = prev;
-	            prev = points[i];
-	        }
-	        if (this.smoothing) {
-	       		ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
-	        }
-	        ctx.stroke();
+	    	if (points[0].p) {
+				var pressurePoints = generatePressurePoints(points, lineWidth);
+				var length = pressurePoints.left.length;
+	    		pressurePoints.right.reverse();
+	    		
+				ctx.beginPath();
+	    		drawLine(ctx, pressurePoints.left, this.smoothing);
+	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);
+	    		drawLine(ctx, pressurePoints.right, this.smoothing);
+	    		ctx.lineTo(pressurePoints.left[0].x, pressurePoints.left[0].y);
+	    		ctx.closePath();
+	    		ctx.fill();
+	    		
+	    		/*
+	    		ctx.beginPath();
+	    		var pt2 = new Vector(pressurePoints.right[0].x,pressurePoints.right[0].y),
+	    			pt1 = new Vector(pressurePoints.left[length-1].x,pressurePoints.left[length-1].y);
+	    		var pt = points[points.length-2];
+	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
+	    		ctx.closePath();
+	    		ctx.fill();
+
+	    		
+				ctx.beginPath();
+	    		pt1 = new Vector(pressurePoints.right[length-1].x,pressurePoints.right[length-1].y);
+	    		pt2 = new Vector(pressurePoints.left[0].x,pressurePoints.left[0].y);
+	    		pt = points[0];
+	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
+	    		ctx.closePath();
+	    		ctx.fill();*/
+	    	} else {
+				ctx.beginPath();
+				drawLine(ctx, points, this.smoothing);
+				ctx.stroke();
+			}
 	    }
 	};
+	
+	function generatePressurePoints(points, thickness) {
+		var result = {left:[], right:[]},
+			len = points.length,
+			lastp = points[0],
+			lastv = new Vector(lastp.x, lastp.y), 
+			currp, currv, tmp;
+		for (var i = 1, l = len; i < l; ++i) {
+			currp = points[i];
+			currv = new Vector(currp.x, currp.y);
+			tmp = Vector.subtract(currv, lastv);
+			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
+			result.left.push({ x: tmp.x, y: tmp.y });
+			tmp = Vector.subtract(currv, lastv);
+			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
+			result.right.push({ x: tmp.x, y: tmp.y });
+			lastp = currp;
+			lastv = currv;
+		}
+		return result;
+	}
+	
+	function drawLine(ctx, points, smoothing) {
+	    ctx.moveTo(points[0].x, points[0].y);
+		var prev = points[0],
+			prevprev = null, curr = prev, len = points.length;
+		for (var i = 1, l = len; i < l; ++i) {
+			curr = points[i];
+			if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
+				// hack to avoid weird linejoins cutting the line
+				curr.x += 0.1; curr.y += 0.1;
+			}
+			if (smoothing) {
+				var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
+				ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
+			} else {
+				ctx.lineTo(curr.x, curr.y);
+			}
+			prevprev = prev;
+			prev = points[i];
+		}
+		if (smoothing) {
+			ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+		}
+	}
 })(TeledrawCanvas);
 
-/**
+
+function Vector(x, y, z) {
+	this.x = x || 0;
+	this.y = y || 0;
+	this.z = z || 0;
+}
+Vector.prototype.add = function (v) {
+	this.x += v.x;
+	this.y += v.y;
+	this.z += v.z;
+	return this;
+};
+Vector.prototype.scale = function (s) {
+	this.x *= s;
+	this.y *= s;
+	this.z *= s;
+	return this;
+};
+Vector.prototype.direction = function () {
+	return Math.atan2(this.y, this.x);
+};
+Vector.prototype.magnitude = function () {
+	return Math.sqrt(this.x*this.x + this.y*this.y + this.z*this.z);
+};
+Vector.prototype.addToMagnitude = function (n) {
+	n = n || 0;
+	var mag = this.magnitude();
+	var magTransformation = Math.sqrt((n + mag) / mag);
+	this.x *= magTransformation;
+	this.y *= magTransformation;
+	this.z *= magTransformation;
+	return this;
+};
+Vector.prototype.unit = function () {
+	return this.scale(1/this.magnitude());
+};
+Vector.prototype.rotateZ = function (t) {
+	var oldX = this.x;
+	var oldY = this.y;
+	this.x = oldX*Math.cos(t) - oldY*Math.sin(t);
+	this.y = oldX*Math.sin(t) + oldY*Math.cos(t);
+	return this;
+};
+Vector.add = function (v1, v2) {
+	return new Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+};
+Vector.subtract = function (v1, v2) {
+	return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+};
+Vector.dot = function (v1, v2) {
+	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+};
+Vector.scale = function (v, s) {
+	return new Vector(v.x * s, v.y * s, v.z * s);
+};
+Vector.cross = function (v1, v2) {
+	return new Vector(
+		v1.y * v2.z - v2.y * v1.z, 
+		v1.z * v2.x - v2.z * v1.x, 
+		v1.x * v2.y - v2.x * v1.y
+	);
+};
+Vector.average = function () {
+	var num, result = new Vector(), items = arguments;
+	if (arguments[0].constructor.toString().indexOf('Array') != -1)
+		items = arguments[0];
+	num = items.length;
+	for (i = 0; i < num;i++) {
+		result.add(Vector.create(items[i]));
+	}
+	return result.scale(1/num);
+};
+Vector.create = function (o) {
+	return new Vector(o.x, o.y, o.z);
+};/**
  * Rectangle tool
  */
 (function (TeledrawCanvas) {
