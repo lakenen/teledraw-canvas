@@ -2333,8 +2333,10 @@ function contains(container, maybe) {
 	// (throws an error if it's not the same aspect ratio as the source canvas)
 	// @todo/consider: release this constraint and just change the size of the source canvas?
 	APIprototype.resize = function (w, h) {
-		var self = this;
-		if (w/h !== self._canvas.width/self._canvas.height) {
+		var self = this,
+			ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
+			ar1 = Math.round(w/h*100)/100;
+		if (ar0 !== ar1) {
 			throw new Error('Not the same aspect ratio!');
 		}
 		self._displayCanvas.width = self.state.width = w;
@@ -2802,7 +2804,7 @@ function contains(container, maybe) {
 			lightness,
 			left = this.canvas.element.offsetLeft,
 			top = this.canvas.element.offsetTop,
-			pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
+			pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
 		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
 		var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
 		_.extend(previewContainer.style, {

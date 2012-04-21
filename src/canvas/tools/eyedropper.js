@@ -23,7 +23,7 @@
 			lightness,
 			left = this.canvas.element.offsetLeft,
 			top = this.canvas.element.offsetTop,
-			pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
+			pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
 		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
 		var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
 		_.extend(previewContainer.style, {
