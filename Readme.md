@@ -6,7 +6,7 @@ You can see a very basic live demo at [lakenen.com/teledraw-canvas](http://laken
 
 ## How to use
 
-Include jQuery and teledraw-canvas.js in your page, and from there it's as simple as creating a canvas element with whatever width and height you want:
+Include teledraw-canvas.js in your page, and from there it's as simple as creating a canvas element with whatever width and height you want:
 
 ```html
 <canvas id="test-canvas" width="512" height="512"></canvas>
