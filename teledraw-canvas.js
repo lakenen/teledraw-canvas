@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw TeledrawCanvas
-	Version 0.8.0 (http://semver.org/)
+	Version 0.9.0 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2180,7 +2180,7 @@ function contains(container, maybe) {
 		this.state.shadowBlur = sb;
 	};
 	
-	APIprototype.updateDisplayCanvas = function () {
+	APIprototype.updateDisplayCanvas = function (noTrigger) {
 		if (this.state.enableZoom === false) {
 			return this;
 		}
@@ -2192,9 +2192,9 @@ function contains(container, maybe) {
 			sw = floor(dw / zoom),
 			sh = floor(dh / zoom);
 		dctx.clearRect(0, 0, dw, dh);
-		this.trigger('display.update:before');
+		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
-		this.trigger('display.update:after');
+		if (noTrigger !== true) this.trigger('display.update:after');
 	};
 	
 	/* this version attempts at better performance, but I don't think it is actually significantly better.
@@ -2874,7 +2874,7 @@ function contains(container, maybe) {
 			lightness,
 			left = this.canvas.element.offsetLeft,
 			top = this.canvas.element.offsetTop,
-			pixel = this.canvas.ctx().getImageData(pt.x,pt.y,1,1).data;
+			pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
 		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
 		var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
 		_.extend(previewContainer.style, {
