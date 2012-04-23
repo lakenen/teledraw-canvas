@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw Canvas
-	Version 0.9.2 (http://semver.org/)
+	Version 0.9.3 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2284,7 +2284,7 @@ Vector.create = function (o) {
 		this.state.shadowBlur = sb;
 	};
 	
-	/*APIprototype.updateDisplayCanvas = function (noTrigger) {
+	APIprototype.updateDisplayCanvas = function (noTrigger) {
 		if (this.state.enableZoom === false) {
 			return this;
 		}
@@ -2299,9 +2299,9 @@ Vector.create = function (o) {
 		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
 		if (noTrigger !== true) this.trigger('display.update:after');
-	};*/
+	};
 	
-	/* this version attempts at better performance by drawing only the bounding rect of the changes */
+	/* this version attempts at better performance by drawing only the bounding rect of the changes
 	APIprototype.updateDisplayCanvas = function (noTrigger, tl, br) {
 		if (this.state.enableZoom === false) {
 			return this;
@@ -2326,7 +2326,7 @@ Vector.create = function (o) {
 		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
 		if (noTrigger !== true) this.trigger('display.update:after');
-	};
+	};*/
 	
 	
 	// API
