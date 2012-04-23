@@ -18,7 +18,7 @@
 			br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
 		}
 		this._restoreBufferCanvas(tl, br);
-		this.canvas.updateDisplayCanvas(tl, br);
+		this.canvas.updateDisplayCanvas(false, tl, br);
 	};
 	
 	Snapshot.prototype.toDataURL = function () {

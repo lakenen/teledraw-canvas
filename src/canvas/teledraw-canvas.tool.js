@@ -77,7 +77,7 @@
 	    	this.currentStroke.ctx.save();
 	    	this.currentStroke.restore();
 	    	this.currentStroke.draw();
-			this.canvas.updateDisplayCanvas(this.currentStroke.tl, this.currentStroke.br);
+			this.canvas.updateDisplayCanvas(false, this.currentStroke.tl, this.currentStroke.br);
 	    	this.currentStroke.ctx.restore();
 	    };
 	    

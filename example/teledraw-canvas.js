@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw Canvas
-	Version 0.9.1 (http://semver.org/)
+	Version 0.9.2 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2284,7 +2284,7 @@ Vector.create = function (o) {
 		this.state.shadowBlur = sb;
 	};
 	
-	APIprototype.updateDisplayCanvas = function (noTrigger) {
+	/*APIprototype.updateDisplayCanvas = function (noTrigger) {
 		if (this.state.enableZoom === false) {
 			return this;
 		}
@@ -2299,11 +2299,14 @@ Vector.create = function (o) {
 		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
 		if (noTrigger !== true) this.trigger('display.update:after');
-	};
+	};*/
 	
-	/* this version attempts at better performance, but I don't think it is actually significantly better.
-	APIprototype.updateDisplayCanvas = function (tl, br) {
-		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+	/* this version attempts at better performance by drawing only the bounding rect of the changes */
+	APIprototype.updateDisplayCanvas = function (noTrigger, tl, br) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
+		var dctx = this.displayCtx(),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom,
 			// bounding rect of the change
@@ -2320,9 +2323,10 @@ Vector.create = function (o) {
 		}
 		// only clear and draw what we need to
 		dctx.clearRect(dtl.x, dtl.y, dw, dh);
+		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
+		if (noTrigger !== true) this.trigger('display.update:after');
 	};
-	*/
 	
 	
 	// API
@@ -2672,7 +2676,7 @@ Vector.create = function (o) {
 			br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
 		}
 		this._restoreBufferCanvas(tl, br);
-		this.canvas.updateDisplayCanvas(tl, br);
+		this.canvas.updateDisplayCanvas(false, tl, br);
 	};
 	
 	Snapshot.prototype.toDataURL = function () {
@@ -2810,7 +2814,7 @@ Vector.create = function (o) {
 	    	this.currentStroke.ctx.save();
 	    	this.currentStroke.restore();
 	    	this.currentStroke.draw();
-			this.canvas.updateDisplayCanvas(this.currentStroke.tl, this.currentStroke.br);
+			this.canvas.updateDisplayCanvas(false, this.currentStroke.tl, this.currentStroke.br);
 	    	this.currentStroke.ctx.restore();
 	    };
 	    
@@ -3353,10 +3357,16 @@ Vector.create = function (o) {
 			currp, currv, tmp;
 		for (var i = 1, l = len; i < l; ++i) {
 			currp = points[i];
+			
+			// ignore this point if they didn't actually move
+			if (currp.x === lastp.x && currp.y === lastp.y) continue;
+			
 			currv = new Vector(currp.x, currp.y);
+			
 			tmp = Vector.subtract(currv, lastv);
 			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
 			result.left.push({ x: tmp.x, y: tmp.y });
+			
 			tmp = Vector.subtract(currv, lastv);
 			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
 			result.right.push({ x: tmp.x, y: tmp.y });
@@ -3367,6 +3377,7 @@ Vector.create = function (o) {
 	}
 	
 	function drawLine(ctx, points, smoothing) {
+		if (points.length === 0) return;
 	    ctx.moveTo(points[0].x, points[0].y);
 		var prev = points[0],
 			prevprev = null, curr = prev, len = points.length;
