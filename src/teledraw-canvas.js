@@ -65,12 +65,34 @@
     	}
     }
     
+    
+    function now() {
+    	return (new Date).getTime();
+    }
+    
+    var lastPressure = null,
+    	lastPressureTime = now();
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		var pressure;
+    		// only get pressure once every other poll;
+    		if (now() - lastPressureTime > 20) {
+    			pressure = wacomPlugin.penAPI.pressure;
+    			lastPressure = pressure;
+    			lastPressureTime = now();
+    		} else {
+    			pressure = lastPressure;
+    		}
+    		return pressure;
+    	}
+    }
+    /*
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pressure;
     	}
     }
-
+	*/
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;
@@ -233,7 +255,7 @@
 	        	top = element.offsetTop,
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = wacomGetPressure();
+				pressure = state.enableWacomSupport ? wacomGetPressure() : null;
 
 	        return {
 	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,

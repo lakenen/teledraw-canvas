@@ -52,6 +52,11 @@
 				var length = pressurePoints.left.length;
 	    		pressurePoints.right.reverse();
 	    		
+				if (pressurePoints.left.length === 0 || 
+					pressurePoints.left.length !== pressurePoints.right.length)
+				{
+					return;
+				}
 				ctx.beginPath();
 	    		drawLine(ctx, pressurePoints.left, this.smoothing);
 	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);

@@ -2082,12 +2082,34 @@ Vector.create = function (o) {
     	}
     }
     
+    
+    function now() {
+    	return (new Date).getTime();
+    }
+    
+    var lastPressure = null,
+    	lastPressureTime = now();
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		var pressure;
+    		// only get pressure once every other poll;
+    		if (now() - lastPressureTime > 20) {
+    			pressure = wacomPlugin.penAPI.pressure;
+    			lastPressure = pressure;
+    			lastPressureTime = now();
+    		} else {
+    			pressure = lastPressure;
+    		}
+    		return pressure;
+    	}
+    }
+    /*
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pressure;
     	}
     }
-
+	*/
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;
@@ -2622,7 +2644,7 @@ Vector.create = function (o) {
 
 	History.prototype.checkpoint = function () {
 	    if (this.past.length > this.canvas.state.maxHistory) {
-			this.past.shift();
+			this.past.shift().destroy();
 	    }
 	    
 	    if (this.current) {
@@ -2663,6 +2685,9 @@ Vector.create = function (o) {
 (function (TeledrawCanvas) {
 	var Snapshot = function (canvas) {
 		this.canvas = canvas;
+		if (!this.canvas._snapshotBuffers) {
+			this.canvas._snapshotBuffers = [];
+		}
 		this._snapshotBufferCanvas();
 	};
 
@@ -2679,14 +2704,18 @@ Vector.create = function (o) {
 		this.canvas.updateDisplayCanvas(false, tl, br);
 	};
 	
+	Snapshot.prototype.destroy = function () {
+		this._putBufferCtx();
+	};
+	
 	Snapshot.prototype.toDataURL = function () {
 		return this.buffer && this.buffer.toDataURL();
 	};
 	
 	// doing this with a buffer canvas instead of get/put image data seems to be significantly faster
 	Snapshot.prototype._snapshotBufferCanvas = function () {
-	    this.buffer = this.canvas.getTempCanvas();
-	    this.buffer.getContext('2d').drawImage(this.canvas.canvas(), 0, 0);
+		this._getBufferCtx();
+	    this.buffer.drawImage(this.canvas.canvas(), 0, 0);
 	};
 	
 	Snapshot.prototype._restoreBufferCanvas = function (tl, br) {
@@ -2697,7 +2726,7 @@ Vector.create = function (o) {
 			return;
 		}
 		ctx.clearRect(tl.x, tl.y, w, h);
-	    ctx.drawImage(this.buffer, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
+	    ctx.drawImage(this.buffer.canvas, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
 	};
 
 	Snapshot.prototype._snapshotImageData = function () {
@@ -2706,6 +2735,26 @@ Vector.create = function (o) {
 	
 	Snapshot.prototype._restoreImageData = function () {
 	    this.canvas.putImageData(this.data);
+	};
+	
+	Snapshot.prototype._putBufferCtx = function () {
+		if (this.buffer) {
+			this.canvas._snapshotBuffers.push(this.buffer);
+		}
+		this.buffer = null;
+	};
+	
+	Snapshot.prototype._getBufferCtx = function () {
+		var ctx;
+		if (!this.buffer) {
+			if (this.canvas._snapshotBuffers.length) {
+				ctx = this.canvas._snapshotBuffers.shift();
+				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+			} else {
+				ctx = this.canvas.getTempCanvas().getContext('2d');
+			}
+		}
+		this.buffer = ctx;
 	};
 	
 	TeledrawCanvas.Snapshot = Snapshot;
@@ -2730,6 +2779,10 @@ Vector.create = function (o) {
 
 	Stroke.prototype.restore = function () {
 	    this.snapshot.restore(this);
+	};	
+	
+	Stroke.prototype.destroy = function () {
+	    this.snapshot.destroy();
 	};	
 	
 	TeledrawCanvas.Stroke = Stroke;
@@ -2804,6 +2857,7 @@ Vector.create = function (o) {
 	        if (this.currentStroke) {
 	        	this.currentStroke.end(pt);
 	            this.draw();
+	            this.currentStroke.destroy();
 	        	this.currentStroke = null;
 	            this.canvas.history.checkpoint();
 	        }
@@ -3316,6 +3370,11 @@ Vector.create = function (o) {
 				var length = pressurePoints.left.length;
 	    		pressurePoints.right.reverse();
 	    		
+				if (pressurePoints.left.length === 0 || 
+					pressurePoints.left.length !== pressurePoints.right.length)
+				{
+					return;
+				}
 				ctx.beginPath();
 	    		drawLine(ctx, pressurePoints.left, this.smoothing);
 	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);

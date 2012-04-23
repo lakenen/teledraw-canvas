@@ -67,6 +67,7 @@
 	        if (this.currentStroke) {
 	        	this.currentStroke.end(pt);
 	            this.draw();
+	            this.currentStroke.destroy();
 	        	this.currentStroke = null;
 	            this.canvas.history.checkpoint();
 	        }
