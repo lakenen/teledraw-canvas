@@ -2288,7 +2288,7 @@ Vector.create = function (o) {
 		if (this.state.enableZoom === false) {
 			return this;
 		}
-		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+		var dctx = this.displayCtx(),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom, 
 			dw = dctx.canvas.width,
@@ -2335,6 +2335,14 @@ Vector.create = function (o) {
 	// returns a 2d rendering context for the canvas element
 	APIprototype.ctx = function () {
 	    return this._ctx || (this._ctx = this._canvas.getContext('2d'));
+	};
+	
+	APIprototype.displayCanvas = function () {
+		return this._displayCanvas;
+	};
+	
+	APIprototype.displayCtx = function () {
+		return this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d'));
 	};
 	
 	// sets the cursor css to be used when the mouse is over the canvas element
