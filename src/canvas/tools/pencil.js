@@ -52,6 +52,11 @@
 				var length = pressurePoints.left.length;
 	    		pressurePoints.right.reverse();
 	    		
+				if (pressurePoints.left.length === 0 || 
+					pressurePoints.left.length !== pressurePoints.right.length)
+				{
+					return;
+				}
 				ctx.beginPath();
 	    		drawLine(ctx, pressurePoints.left, this.smoothing);
 	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);
@@ -93,10 +98,16 @@
 			currp, currv, tmp;
 		for (var i = 1, l = len; i < l; ++i) {
 			currp = points[i];
+			
+			// ignore this point if they didn't actually move
+			if (currp.x === lastp.x && currp.y === lastp.y) continue;
+			
 			currv = new Vector(currp.x, currp.y);
+			
 			tmp = Vector.subtract(currv, lastv);
 			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
 			result.left.push({ x: tmp.x, y: tmp.y });
+			
 			tmp = Vector.subtract(currv, lastv);
 			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
 			result.right.push({ x: tmp.x, y: tmp.y });
@@ -107,6 +118,7 @@
 	}
 	
 	function drawLine(ctx, points, smoothing) {
+		if (points.length === 0) return;
 	    ctx.moveTo(points[0].x, points[0].y);
 		var prev = points[0],
 			prevprev = null, curr = prev, len = points.length;

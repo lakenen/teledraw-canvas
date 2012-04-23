@@ -19,6 +19,10 @@
 	    this.snapshot.restore(this);
 	};	
 	
+	Stroke.prototype.destroy = function () {
+	    this.snapshot.destroy();
+	};	
+	
 	TeledrawCanvas.Stroke = Stroke;
 })(TeledrawCanvas);
 

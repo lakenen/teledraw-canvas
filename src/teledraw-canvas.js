@@ -65,12 +65,34 @@
     	}
     }
     
+    
+    function now() {
+    	return (new Date).getTime();
+    }
+    
+    var lastPressure = null,
+    	lastPressureTime = now();
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		var pressure;
+    		// only get pressure once every other poll;
+    		if (now() - lastPressureTime > 20) {
+    			pressure = wacomPlugin.penAPI.pressure;
+    			lastPressure = pressure;
+    			lastPressureTime = now();
+    		} else {
+    			pressure = lastPressure;
+    		}
+    		return pressure;
+    	}
+    }
+    /*
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pressure;
     	}
     }
-
+	*/
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;
@@ -233,7 +255,7 @@
 	        	top = element.offsetTop,
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = wacomGetPressure();
+				pressure = state.enableWacomSupport ? wacomGetPressure() : null;
 
 	        return {
 	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
@@ -284,9 +306,12 @@
 		if (noTrigger !== true) this.trigger('display.update:after');
 	};
 	
-	/* this version attempts at better performance, but I don't think it is actually significantly better.
-	APIprototype.updateDisplayCanvas = function (tl, br) {
-		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+	/* this version attempts at better performance by drawing only the bounding rect of the changes
+	APIprototype.updateDisplayCanvas = function (noTrigger, tl, br) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
+		var dctx = this.displayCtx(),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom,
 			// bounding rect of the change
@@ -303,9 +328,10 @@
 		}
 		// only clear and draw what we need to
 		dctx.clearRect(dtl.x, dtl.y, dw, dh);
+		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
-	};
-	*/
+		if (noTrigger !== true) this.trigger('display.update:after');
+	};*/
 	
 	
 	// API

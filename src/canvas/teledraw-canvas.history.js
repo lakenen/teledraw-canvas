@@ -17,7 +17,7 @@
 
 	History.prototype.checkpoint = function () {
 	    if (this.past.length > this.canvas.state.maxHistory) {
-			this.past.shift();
+			this.past.shift().destroy();
 	    }
 	    
 	    if (this.current) {
