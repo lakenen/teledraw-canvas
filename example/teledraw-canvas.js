@@ -2453,6 +2453,14 @@ Vector.create = function (o) {
 		img.src = url;
 		return self;
 	};
+	
+	// clears the canvas and draws the supplied image, video or canvas element
+	APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
+		this.clear(TRUE);
+		this.ctx().drawImage(element, 0, 0);
+		this.updateDisplayCanvas();
+		return this;
+	};
 
 	// returns the ImageData of the whole canvas element
 	APIprototype.getImageData = function () {

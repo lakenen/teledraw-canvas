@@ -436,6 +436,24 @@
 		img.src = url;
 		return self;
 	};
+	
+	// returns true if the canvas has no data
+	APIprototype.isBlank = function () {
+		var data = this.getImageData().data;
+		var len = data.length;
+		for (var i = 0, l = len; i < l; ++i) {
+			if (data[i] !== 0) return false;
+		}
+		return true;
+	};
+	
+	// clears the canvas and draws the supplied image, video or canvas element
+	APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
+		this.clear(TRUE);
+		this.ctx().drawImage(element, 0, 0);
+		this.updateDisplayCanvas();
+		return this;
+	};
 
 	// returns the ImageData of the whole canvas element
 	APIprototype.getImageData = function () {
