@@ -70,7 +70,7 @@
     	return (new Date).getTime();
     }
     
-    var lastPressure = null,
+    /*var lastPressure = null,
     	lastPressureTime = now();
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
@@ -85,14 +85,14 @@
     		}
     		return pressure;
     	}
-    }
-    /*
+    }*/
+    
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pressure;
     	}
     }
-	*/
+	
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;

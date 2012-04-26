@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw Canvas
-	Version 0.9.4 (http://semver.org/)
+	Version 0.10.5 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2087,7 +2087,7 @@ Vector.create = function (o) {
     	return (new Date).getTime();
     }
     
-    var lastPressure = null,
+    /*var lastPressure = null,
     	lastPressureTime = now();
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
@@ -2102,14 +2102,14 @@ Vector.create = function (o) {
     		}
     		return pressure;
     	}
-    }
-    /*
+    }*/
+    
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pressure;
     	}
     }
-	*/
+	
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;
@@ -2452,6 +2452,16 @@ Vector.create = function (o) {
 		};
 		img.src = url;
 		return self;
+	};
+	
+	// returns true if the canvas has no data
+	APIprototype.isBlank = function () {
+		var data = this.getImageData().data;
+		var len = data.length;
+		for (var i = 0, l = len; i < l; ++i) {
+			if (data[i] !== 0) return false;
+		}
+		return true;
 	};
 	
 	// clears the canvas and draws the supplied image, video or canvas element
@@ -3306,6 +3316,8 @@ Vector.create = function (o) {
 	    var first = _.extend({}, this.first),
 	    	second = _.extend({}, this.second),
 	    	a, x, y, pi = Math.PI;
+	    delete first.p;
+	    delete second.p;
 	    if (this.tool.shiftKey) {
 	    	x = second.x - first.x;
 	    	y = second.y - first.y;

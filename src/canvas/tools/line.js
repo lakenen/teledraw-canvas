@@ -29,6 +29,8 @@
 	    var first = _.extend({}, this.first),
 	    	second = _.extend({}, this.second),
 	    	a, x, y, pi = Math.PI;
+	    delete first.p;
+	    delete second.p;
 	    if (this.tool.shiftKey) {
 	    	x = second.x - first.x;
 	    	y = second.y - first.y;

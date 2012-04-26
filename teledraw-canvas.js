@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw Canvas
-	Version 0.9.1 (http://semver.org/)
+	Version 0.10.5 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2082,12 +2082,34 @@ Vector.create = function (o) {
     	}
     }
     
+    
+    function now() {
+    	return (new Date).getTime();
+    }
+    
+    /*var lastPressure = null,
+    	lastPressureTime = now();
+    function wacomGetPressure() {
+    	if (wacomPlugin && wacomPlugin.penAPI) {
+    		var pressure;
+    		// only get pressure once every other poll;
+    		if (now() - lastPressureTime > 20) {
+    			pressure = wacomPlugin.penAPI.pressure;
+    			lastPressure = pressure;
+    			lastPressureTime = now();
+    		} else {
+    			pressure = lastPressure;
+    		}
+    		return pressure;
+    	}
+    }*/
+    
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pressure;
     	}
     }
-
+	
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;
@@ -2176,7 +2198,7 @@ Vector.create = function (o) {
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
 	        if (e.target == element || state.mouseDown) {
 	        	var pt = getCoord(e);
-				state.tool.move(state.mouseDown, state.last, pt);
+				_.defer(function () { state.tool.move(state.mouseDown, state.last, pt); });
 				state.last = pt;
 				self.trigger('mousemove', pt, e);
 	            lastMoveEvent = e.type;
@@ -2246,21 +2268,31 @@ Vector.create = function (o) {
 		}
 	    
 		function getCoord(e) {
-	        var left = element.offsetLeft,
-	        	top = element.offsetTop,
+	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = wacomGetPressure();
+				pressure = state.enableWacomSupport ? wacomGetPressure() : null;
 
 	        return {
-	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
-	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
-	        	xd: floor(pageX - left) || 0,
-	        	yd: floor(pageY - top) || 0,
+	        	x: floor((pageX - off.left)/state.currentZoom) + state.currentOffset.x || 0,
+	        	y: floor((pageY - off.top)/state.currentZoom) + state.currentOffset.y || 0,
+	        	xd: floor(pageX - off.left) || 0,
+	        	yd: floor(pageY - off.top) || 0,
 	        	p: pressure
 	        };
 		}
 	};
+	
+	function getOffset(el) {
+		var _x = 0;
+		var _y = 0;
+		while( el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop) ) {
+			_x += el.offsetLeft - el.scrollLeft;
+			_y += el.offsetTop - el.scrollTop;
+			el = el.offsetParent;
+		}
+		return { top: _y, left: _x };
+	}
 	
 	var APIprototype = API.prototype;
 	
@@ -2301,9 +2333,12 @@ Vector.create = function (o) {
 		if (noTrigger !== true) this.trigger('display.update:after');
 	};
 	
-	/* this version attempts at better performance, but I don't think it is actually significantly better.
-	APIprototype.updateDisplayCanvas = function (tl, br) {
-		var dctx = this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d')),
+	/* this version attempts at better performance by drawing only the bounding rect of the changes
+	APIprototype.updateDisplayCanvas = function (noTrigger, tl, br) {
+		if (this.state.enableZoom === false) {
+			return this;
+		}
+		var dctx = this.displayCtx(),
 			off = this.state.currentOffset,
 			zoom = this.state.currentZoom,
 			// bounding rect of the change
@@ -2320,9 +2355,10 @@ Vector.create = function (o) {
 		}
 		// only clear and draw what we need to
 		dctx.clearRect(dtl.x, dtl.y, dw, dh);
+		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
-	};
-	*/
+		if (noTrigger !== true) this.trigger('display.update:after');
+	};*/
 	
 	
 	// API
@@ -2416,6 +2452,24 @@ Vector.create = function (o) {
 		};
 		img.src = url;
 		return self;
+	};
+	
+	// returns true if the canvas has no data
+	APIprototype.isBlank = function () {
+		var data = this.getImageData().data;
+		var len = data.length;
+		for (var i = 0, l = len; i < l; ++i) {
+			if (data[i] !== 0) return false;
+		}
+		return true;
+	};
+	
+	// clears the canvas and draws the supplied image, video or canvas element
+	APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
+		this.clear(TRUE);
+		this.ctx().drawImage(element, 0, 0);
+		this.updateDisplayCanvas();
+		return this;
 	};
 
 	// returns the ImageData of the whole canvas element
@@ -2618,7 +2672,7 @@ Vector.create = function (o) {
 
 	History.prototype.checkpoint = function () {
 	    if (this.past.length > this.canvas.state.maxHistory) {
-			this.past.shift();
+			this.past.shift().destroy();
 	    }
 	    
 	    if (this.current) {
@@ -2659,6 +2713,9 @@ Vector.create = function (o) {
 (function (TeledrawCanvas) {
 	var Snapshot = function (canvas) {
 		this.canvas = canvas;
+		if (!this.canvas._snapshotBuffers) {
+			this.canvas._snapshotBuffers = [];
+		}
 		this._snapshotBufferCanvas();
 	};
 
@@ -2672,7 +2729,11 @@ Vector.create = function (o) {
 			br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
 		}
 		this._restoreBufferCanvas(tl, br);
-		this.canvas.updateDisplayCanvas(tl, br);
+		this.canvas.updateDisplayCanvas(false, tl, br);
+	};
+	
+	Snapshot.prototype.destroy = function () {
+		this._putBufferCtx();
 	};
 	
 	Snapshot.prototype.toDataURL = function () {
@@ -2681,8 +2742,8 @@ Vector.create = function (o) {
 	
 	// doing this with a buffer canvas instead of get/put image data seems to be significantly faster
 	Snapshot.prototype._snapshotBufferCanvas = function () {
-	    this.buffer = this.canvas.getTempCanvas();
-	    this.buffer.getContext('2d').drawImage(this.canvas.canvas(), 0, 0);
+		this._getBufferCtx();
+	    this.buffer.drawImage(this.canvas.canvas(), 0, 0);
 	};
 	
 	Snapshot.prototype._restoreBufferCanvas = function (tl, br) {
@@ -2693,7 +2754,7 @@ Vector.create = function (o) {
 			return;
 		}
 		ctx.clearRect(tl.x, tl.y, w, h);
-	    ctx.drawImage(this.buffer, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
+	    ctx.drawImage(this.buffer.canvas, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
 	};
 
 	Snapshot.prototype._snapshotImageData = function () {
@@ -2702,6 +2763,26 @@ Vector.create = function (o) {
 	
 	Snapshot.prototype._restoreImageData = function () {
 	    this.canvas.putImageData(this.data);
+	};
+	
+	Snapshot.prototype._putBufferCtx = function () {
+		if (this.buffer) {
+			this.canvas._snapshotBuffers.push(this.buffer);
+		}
+		this.buffer = null;
+	};
+	
+	Snapshot.prototype._getBufferCtx = function () {
+		var ctx;
+		if (!this.buffer) {
+			if (this.canvas._snapshotBuffers.length) {
+				ctx = this.canvas._snapshotBuffers.shift();
+				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+			} else {
+				ctx = this.canvas.getTempCanvas().getContext('2d');
+			}
+		}
+		this.buffer = ctx;
 	};
 	
 	TeledrawCanvas.Snapshot = Snapshot;
@@ -2726,6 +2807,10 @@ Vector.create = function (o) {
 
 	Stroke.prototype.restore = function () {
 	    this.snapshot.restore(this);
+	};	
+	
+	Stroke.prototype.destroy = function () {
+	    this.snapshot.destroy();
 	};	
 	
 	TeledrawCanvas.Stroke = Stroke;
@@ -2800,6 +2885,7 @@ Vector.create = function (o) {
 	        if (this.currentStroke) {
 	        	this.currentStroke.end(pt);
 	            this.draw();
+	            this.currentStroke.destroy();
 	        	this.currentStroke = null;
 	            this.canvas.history.checkpoint();
 	        }
@@ -2810,7 +2896,7 @@ Vector.create = function (o) {
 	    	this.currentStroke.ctx.save();
 	    	this.currentStroke.restore();
 	    	this.currentStroke.draw();
-			this.canvas.updateDisplayCanvas(this.currentStroke.tl, this.currentStroke.br);
+			this.canvas.updateDisplayCanvas(false, this.currentStroke.tl, this.currentStroke.br);
 	    	this.currentStroke.ctx.restore();
 	    };
 	    
@@ -3230,6 +3316,8 @@ Vector.create = function (o) {
 	    var first = _.extend({}, this.first),
 	    	second = _.extend({}, this.second),
 	    	a, x, y, pi = Math.PI;
+	    delete first.p;
+	    delete second.p;
 	    if (this.tool.shiftKey) {
 	    	x = second.x - first.x;
 	    	y = second.y - first.y;
@@ -3312,6 +3400,11 @@ Vector.create = function (o) {
 				var length = pressurePoints.left.length;
 	    		pressurePoints.right.reverse();
 	    		
+				if (pressurePoints.left.length === 0 || 
+					pressurePoints.left.length !== pressurePoints.right.length)
+				{
+					return;
+				}
 				ctx.beginPath();
 	    		drawLine(ctx, pressurePoints.left, this.smoothing);
 	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);
@@ -3353,10 +3446,16 @@ Vector.create = function (o) {
 			currp, currv, tmp;
 		for (var i = 1, l = len; i < l; ++i) {
 			currp = points[i];
+			
+			// ignore this point if they didn't actually move
+			if (currp.x === lastp.x && currp.y === lastp.y) continue;
+			
 			currv = new Vector(currp.x, currp.y);
+			
 			tmp = Vector.subtract(currv, lastv);
 			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
 			result.left.push({ x: tmp.x, y: tmp.y });
+			
 			tmp = Vector.subtract(currv, lastv);
 			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
 			result.right.push({ x: tmp.x, y: tmp.y });
@@ -3367,6 +3466,7 @@ Vector.create = function (o) {
 	}
 	
 	function drawLine(ctx, points, smoothing) {
+		if (points.length === 0) return;
 	    ctx.moveTo(points[0].x, points[0].y);
 		var prev = points[0],
 			prevprev = null, curr = prev, len = points.length;
