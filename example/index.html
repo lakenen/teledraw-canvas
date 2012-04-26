@@ -20,16 +20,14 @@
 		var c;
 		$(function () {
 		
-			var grid = createGrid(1024, 512),
-				previewgrid =createGrid(1024, 512, 0.25);
-				
-				
 			c = TeledrawCanvas('test-canvas', {
 				fullWidth: 1024,
 				fullHeight: 1024
 			});
 			
-			
+			/*var grid = createGrid(1024, 512),
+				previewgrid =createGrid(1024, 512, 0.25);
+				
 			c.on('display.update:after', function () {
 				// draw gridlines
 				var scanv = this.canvas();
@@ -126,7 +124,7 @@
 					$(window).unbind('mousemove touchmove', move);
 				});
 				event.preventDefault();
-			});
+			});*/
 		});
 	</script>
 

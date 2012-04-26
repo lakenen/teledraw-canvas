@@ -2082,11 +2082,6 @@ Vector.create = function (o) {
     	}
     }
     
-    
-    function now() {
-    	return (new Date).getTime();
-    }
-    
     /*var lastPressure = null,
     	lastPressureTime = now();
     function wacomGetPressure() {
@@ -2106,7 +2101,8 @@ Vector.create = function (o) {
     
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
-    		return wacomPlugin.penAPI.pressure;
+    		var p = wacomPlugin.penAPI.pressure;
+    		return p;
     	}
     }
 	
@@ -2198,7 +2194,7 @@ Vector.create = function (o) {
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
 	        if (e.target == element || state.mouseDown) {
 	        	var pt = getCoord(e);
-				_.defer(function () { state.tool.move(state.mouseDown, state.last, pt); });
+				state.tool.move(state.mouseDown, state.last, pt);
 				state.last = pt;
 				self.trigger('mousemove', pt, e);
 	            lastMoveEvent = e.type;
@@ -2695,11 +2691,11 @@ Vector.create = function (o) {
 	    }
 	};
 	
-	History.prototype._move = function(stack_from, stack_to) {
-	    if (!stack_from.length) return FALSE;
+	History.prototype._move = function(from, to) {
+	    if (!from.length) return FALSE;
 	    if (!this.current) return FALSE;
-	    stack_to.push(this.current);
-		this.current = stack_from.pop();
+	    to.push(this.current);
+		this.current = from.pop();
 		this.current.restore();
 		return TRUE;
 	};
@@ -2776,7 +2772,7 @@ Vector.create = function (o) {
 		var ctx;
 		if (!this.buffer) {
 			if (this.canvas._snapshotBuffers.length) {
-				ctx = this.canvas._snapshotBuffers.shift();
+				ctx = this.canvas._snapshotBuffers.pop();
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 			} else {
 				ctx = this.canvas.getTempCanvas().getContext('2d');

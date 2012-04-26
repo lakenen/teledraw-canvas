@@ -68,7 +68,7 @@
 		var ctx;
 		if (!this.buffer) {
 			if (this.canvas._snapshotBuffers.length) {
-				ctx = this.canvas._snapshotBuffers.shift();
+				ctx = this.canvas._snapshotBuffers.pop();
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 			} else {
 				ctx = this.canvas.getTempCanvas().getContext('2d');

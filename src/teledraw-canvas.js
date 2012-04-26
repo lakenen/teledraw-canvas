@@ -65,11 +65,6 @@
     	}
     }
     
-    
-    function now() {
-    	return (new Date).getTime();
-    }
-    
     /*var lastPressure = null,
     	lastPressureTime = now();
     function wacomGetPressure() {
@@ -89,7 +84,8 @@
     
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
-    		return wacomPlugin.penAPI.pressure;
+    		var p = wacomPlugin.penAPI.pressure;
+    		return p;
     	}
     }
 	
@@ -181,7 +177,7 @@
 	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
 	        if (e.target == element || state.mouseDown) {
 	        	var pt = getCoord(e);
-				_.defer(function () { state.tool.move(state.mouseDown, state.last, pt); });
+				state.tool.move(state.mouseDown, state.last, pt);
 				state.last = pt;
 				self.trigger('mousemove', pt, e);
 	            lastMoveEvent = e.type;
