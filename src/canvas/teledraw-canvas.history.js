@@ -40,11 +40,11 @@
 	    }
 	};
 	
-	History.prototype._move = function(stack_from, stack_to) {
-	    if (!stack_from.length) return FALSE;
+	History.prototype._move = function(from, to) {
+	    if (!from.length) return FALSE;
 	    if (!this.current) return FALSE;
-	    stack_to.push(this.current);
-		this.current = stack_from.pop();
+	    to.push(this.current);
+		this.current = from.pop();
 		this.current.restore();
 		return TRUE;
 	};

@@ -65,12 +65,7 @@
     	}
     }
     
-    
-    function now() {
-    	return (new Date).getTime();
-    }
-    
-    var lastPressure = null,
+    /*var lastPressure = null,
     	lastPressureTime = now();
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
@@ -85,14 +80,15 @@
     		}
     		return pressure;
     	}
-    }
-    /*
+    }*/
+    
     function wacomGetPressure() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
-    		return wacomPlugin.penAPI.pressure;
+    		var p = wacomPlugin.penAPI.pressure;
+    		return p;
     	}
     }
-	*/
+	
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
     		return wacomPlugin.penAPI.pointerType === 3;
@@ -251,21 +247,31 @@
 		}
 	    
 		function getCoord(e) {
-	        var left = element.offsetLeft,
-	        	top = element.offsetTop,
+	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
 				pressure = state.enableWacomSupport ? wacomGetPressure() : null;
 
 	        return {
-	        	x: floor((pageX - left)/state.currentZoom) + state.currentOffset.x || 0,
-	        	y: floor((pageY - top)/state.currentZoom) + state.currentOffset.y || 0,
-	        	xd: floor(pageX - left) || 0,
-	        	yd: floor(pageY - top) || 0,
+	        	x: floor((pageX - off.left)/state.currentZoom) + state.currentOffset.x || 0,
+	        	y: floor((pageY - off.top)/state.currentZoom) + state.currentOffset.y || 0,
+	        	xd: floor(pageX - off.left) || 0,
+	        	yd: floor(pageY - off.top) || 0,
 	        	p: pressure
 	        };
 		}
 	};
+	
+	function getOffset(el) {
+		var _x = 0;
+		var _y = 0;
+		while( el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop) ) {
+			_x += el.offsetLeft - el.scrollLeft;
+			_y += el.offsetTop - el.scrollTop;
+			el = el.offsetParent;
+		}
+		return { top: _y, left: _x };
+	}
 	
 	var APIprototype = API.prototype;
 	
@@ -425,6 +431,24 @@
 		};
 		img.src = url;
 		return self;
+	};
+	
+	// returns true if the canvas has no data
+	APIprototype.isBlank = function () {
+		var data = this.getImageData().data;
+		var len = data.length;
+		for (var i = 0, l = len; i < l; ++i) {
+			if (data[i] !== 0) return false;
+		}
+		return true;
+	};
+	
+	// clears the canvas and draws the supplied image, video or canvas element
+	APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
+		this.clear(TRUE);
+		this.ctx().drawImage(element, 0, 0);
+		this.updateDisplayCanvas();
+		return this;
 	};
 
 	// returns the ImageData of the whole canvas element
