@@ -91,7 +91,7 @@
 	
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
-    		return wacomPlugin.penAPI.pointerType === 3;
+    		return parseInt(wacomPlugin.penAPI.pointerType) === 3;
     	}
 	}
 	
@@ -245,12 +245,20 @@
 		function gestureEnd(evt) {
 		
 		}
-	    
+	    var lastpressure;
 		function getCoord(e) {
 	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = state.enableWacomSupport ? wacomGetPressure() : null;
+				pressure;
+			if (state.enableWacomSupport) {
+				if (lastpressure !== false) {
+					pressure = lastpressure;
+					lastpressure = false;
+				} else {
+					pressure = lastpressure = wacomGetPressure();
+				}
+			}
 
 	        return {
 	        	x: floor((pageX - off.left)/state.currentZoom) + state.currentOffset.x || 0,

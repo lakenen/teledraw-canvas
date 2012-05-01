@@ -2108,7 +2108,7 @@ Vector.create = function (o) {
 	
 	function wacomIsEraser() {
     	if (wacomPlugin && wacomPlugin.penAPI) {
-    		return wacomPlugin.penAPI.pointerType === 3;
+    		return parseInt(wacomPlugin.penAPI.pointerType) === 3;
     	}
 	}
 	
@@ -2211,7 +2211,7 @@ Vector.create = function (o) {
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
-			if (wacomIsEraser() && state.currentTool !== 'eraser') {
+			if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
 				self.setTool('eraser');
 				state.wacomWasEraser = true;
 			}
@@ -2262,12 +2262,20 @@ Vector.create = function (o) {
 		function gestureEnd(evt) {
 		
 		}
-	    
+	    var lastpressure;
 		function getCoord(e) {
 	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = state.enableWacomSupport ? wacomGetPressure() : null;
+				pressure;
+			if (state.enableWacomSupport) {
+				if (lastpressure !== false) {
+					pressure = lastpressure;
+					lastpressure = false;
+				} else {
+					pressure = lastpressure = wacomGetPressure();
+				}
+			}
 
 	        return {
 	        	x: floor((pageX - off.left)/state.currentZoom) + state.currentOffset.x || 0,
