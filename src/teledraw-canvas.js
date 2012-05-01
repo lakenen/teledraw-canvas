@@ -194,7 +194,7 @@
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
             
 			state.mouseDown = TRUE;
-			if (wacomIsEraser() && state.currentTool !== 'eraser') {
+			if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
 				self.setTool('eraser');
 				state.wacomWasEraser = true;
 			}
