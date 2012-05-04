@@ -95,6 +95,17 @@
     	}
 	}
 	
+	function getOffset(el) {
+		var _x = 0;
+		var _y = 0;
+		while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
+			_x += el.offsetLeft;
+			_y += el.offsetTop;
+			el = el.offsetParent;
+		}
+		return { top: _y, left: _x };
+	}
+	
 	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
 		if (w) c.width = w;
@@ -108,7 +119,7 @@
 			state = self.state = _.extend({}, defaultState, options);
 		
 		if (typeof (new Canvas()).getContext != 'function') {
-			throw new Error('Your browser does not support HTML canvas!');
+			throw new Error('Error: Your browser does not support HTML canvas!');
 			return false;
 		}
 		
@@ -139,8 +150,20 @@
 		self.zoom(0);
 		self.history.checkpoint();
 		TeledrawCanvas.canvases[_id++] = self;
-		
-		var gInitZoom, lastMoveEvent = NULL;
+		self.bindEvents();
+	};
+	
+	var APIprototype = API.prototype;
+	
+	APIprototype.bindEvents = function () {
+		var self = this,
+			element = self.element,
+			state = self.state,
+			gInitZoom,
+			lastMoveEvent = NULL,
+			lastmove = 0,
+			lastpressure = 0;
+			
 		addEvent(element, 'gesturestart', gestureStart);
 		addEvent(element, 'gesturechange', gestureChange);
 		addEvent(element, 'gestureend', gestureEnd);
@@ -151,7 +174,24 @@
 		addEvent(element, 'mouseleave', mouseLeave);
 	    addEvent(window, 'mousemove', mouseMove);        
 	    addEvent(window, 'touchmove', mouseMove);
+	    addEvent(window, 'keydown', keyDown);
+	    addEvent(window, 'keyup', keyUp);
 	   
+		self.unbindEvents = function () {
+			removeEvent(element, 'gesturestart', gestureStart);
+			removeEvent(element, 'gesturechange', gestureChange);
+			removeEvent(element, 'gestureend', gestureEnd);
+			removeEvent(element, 'dblclick', dblClick);
+			removeEvent(element, 'mouseenter', mouseEnter); 
+			removeEvent(element, 'mousedown', mouseDown);    
+			removeEvent(element, 'touchstart', mouseDown);
+			removeEvent(element, 'mouseleave', mouseLeave);
+			removeEvent(window, 'mousemove', mouseMove);        
+			removeEvent(window, 'touchmove', mouseMove);
+			removeEvent(window, 'keydown', keyDown);
+			removeEvent(window, 'keyup', keyUp);
+		};
+		
 		function mouseEnter(evt) {
 			var pt = getCoord(evt);
 			state.tool.enter(state.mouseDown, pt);
@@ -170,7 +210,93 @@
 			state.tool.dblclick(pt);
 		}
 		
-		var lastmove = 0;
+		function keyUp(e) {
+    		state.tool.keyup(state.mouse_down, e.keyCode);
+	    }
+		
+		function keyDown(e) {
+    		state.tool.keydown(state.mouse_down, e.keyCode);
+    		if (!state.enableKeyboardShortcuts) {
+    			return;
+    		}
+	    	var elt = document.activeElement.nodeName.toLowerCase();
+	    	if (name === 'input' || name === 'textarea') {
+	    		return;
+	    	} else {
+		    	switch (e.keyCode) {
+		    		case 69: // e
+		    			self.setTool('eraser');
+		    			break;
+		    		case 70: // f
+		    			self.setTool('fill');
+		    			break;
+		    		case 73: // i
+		    			self.setTool('eyedropper');
+		    			break;
+		    		case 76: // l
+		    			self.setTool('line');
+		    			break;
+		    		case 79: // o
+		    			self.setTool('ellipse');
+		    			//Canvas.getTool().setFill(e.shiftKey === true);
+		    			break;
+		    		case 80: // p
+		    			self.setTool('pencil');
+		    			break;
+		    		case 82: // r
+		    			self.setTool('rectangle');
+		    			//Canvas.getTool().setFill(e.shiftKey === true);
+		    			break;
+		    		case 90: // z
+		    			if (e.metaKey || e.ctrlKey) {
+	    	    			if (e.shiftKey) {
+	    	    				self.redo();
+	    	    			} else {
+	    	    				self.undo();
+	    	    			}
+	    	    			return false;
+		    	    	}
+		    			break;
+		    		case 189: // -
+		    			if (e.shiftKey) { // _
+    	    				// decrease brush size
+		    				self.setStrokeSize(state.strokeSize - 500);
+    	    			}
+		    			break;
+		    		case 187: // =
+		    			if (e.shiftKey) { // +
+    	    				// increase brush size
+		    				self.setStrokeSize(state.strokeSize + 500);
+    	    			}
+		    			break;
+		    		case 188: // ,
+		    			if (e.shiftKey) { // <
+    	    				// decrease alpha
+		    				self.setAlpha(state.globalAlpha - 0.05);
+    	    			}
+		    			break;
+		    		case 190: // .
+		    			if (e.shiftKey) { // >
+    	    				// increase alpha
+		    				self.setAlpha(state.globalAlpha + 0.05);
+    	    			}
+		    			break;
+		    		case 219: // [
+		    			if (e.shiftKey) { // {
+    	    				// decrease brush softness
+		    				self.setStrokeSoftness(state.strokeSoftness - 10);
+    	    			}
+		    			break;
+		    		case 221: // ]
+		    			if (e.shiftKey) { // }
+    	    				// increase brush softness
+		    				self.setStrokeSoftness(state.strokeSoftness + 10);
+    	    			}
+		    			break;
+		    	}
+	    	}
+		}
+		
 	    function mouseMove(e) {
 	    	if (Date.now() - lastmove < 25) {
 	    		return FALSE;
@@ -251,7 +377,7 @@
 		function gestureEnd(evt) {
 		
 		}
-	    var lastpressure = 0;
+		
 		function getCoord(e) {
 	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
@@ -273,20 +399,6 @@
 	        };
 		}
 	};
-	
-	function getOffset(el) {
-		var _x = 0;
-		var _y = 0;
-		while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
-			_x += el.offsetLeft - el.scrollLeft;
-			_y += el.offsetTop - el.scrollTop;
-			el = el.offsetParent;
-		}
-		return { top: _y, left: _x };
-	}
-	
-	var APIprototype = API.prototype;
-	
 	
 	APIprototype.setRGBAArrayColor = function (rgba) {
 		var state = this.state;
@@ -370,6 +482,11 @@
 	
 	APIprototype.displayCtx = function () {
 		return this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d'));
+	};
+	
+	// this should be called when removing a canvas to avoid event leaks
+	APIprototype.destroy = function () {
+		this.unbindEvents();
 	};
 	
 	// sets the cursor css to be used when the mouse is over the canvas element
