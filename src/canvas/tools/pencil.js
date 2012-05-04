@@ -33,7 +33,7 @@
 				case 'round':
 					ctx.beginPath();
 					if (points[0].p) {
-						lineWidth *= points[0].p;
+						lineWidth *= points[0].p * 2;
 					}
 					ctx.arc(points[0].x, points[0].y, lineWidth / 2, 0, 2 * Math.PI, true);
 					ctx.closePath();
@@ -47,41 +47,11 @@
 	        ctx.lineCap = this.lineCap;
 	        ctx.lineWidth = lineWidth;
 	    
-	    	if (points[0].p) {
-				var pressurePoints = generatePressurePoints(points, lineWidth);
-				var length = pressurePoints.left.length;
-	    		pressurePoints.right.reverse();
-	    		
-				if (pressurePoints.left.length === 0 || 
-					pressurePoints.left.length !== pressurePoints.right.length)
-				{
-					return;
-				}
+	    	if (points[0].p || points[1].p) {
 				ctx.beginPath();
-	    		drawLine(ctx, pressurePoints.left, this.smoothing);
-	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);
-	    		drawLine(ctx, pressurePoints.right, this.smoothing);
-	    		ctx.lineTo(pressurePoints.left[0].x, pressurePoints.left[0].y);
+	    		drawLine(ctx, generatePressurePoints(points, lineWidth), this.smoothing);
 	    		ctx.closePath();
 	    		ctx.fill();
-	    		
-	    		/*
-	    		ctx.beginPath();
-	    		var pt2 = new Vector(pressurePoints.right[0].x,pressurePoints.right[0].y),
-	    			pt1 = new Vector(pressurePoints.left[length-1].x,pressurePoints.left[length-1].y);
-	    		var pt = points[points.length-2];
-	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
-	    		ctx.closePath();
-	    		ctx.fill();
-
-	    		
-				ctx.beginPath();
-	    		pt1 = new Vector(pressurePoints.right[length-1].x,pressurePoints.right[length-1].y);
-	    		pt2 = new Vector(pressurePoints.left[0].x,pressurePoints.left[0].y);
-	    		pt = points[0];
-	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
-	    		ctx.closePath();
-	    		ctx.fill();*/
 	    	} else {
 				ctx.beginPath();
 				drawLine(ctx, points, this.smoothing);
@@ -91,11 +61,11 @@
 	};
 	
 	function generatePressurePoints(points, thickness) {
-		var result = {left:[], right:[]},
+		var path = {left:[], right:[]},
 			len = points.length,
 			lastp = points[0],
 			lastv = new Vector(lastp.x, lastp.y), 
-			currp, currv, tmp;
+			currp, currv, left, right, tmp;
 		for (var i = 1, l = len; i < l; ++i) {
 			currp = points[i];
 			
@@ -103,17 +73,30 @@
 			if (currp.x === lastp.x && currp.y === lastp.y) continue;
 			
 			currv = new Vector(currp.x, currp.y);
+			left = Vector.subtract(currv, lastv).unit().rotateZ(Math.PI/2);
+			right = Vector.subtract(currv, lastv).unit().rotateZ(-Math.PI/2);
 			
-			tmp = Vector.subtract(currv, lastv);
-			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
-			result.left.push({ x: tmp.x, y: tmp.y });
+			tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
+			path.left.push({ x: tmp.x, y: tmp.y });
 			
-			tmp = Vector.subtract(currv, lastv);
-			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
-			result.right.push({ x: tmp.x, y: tmp.y });
+			tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
+			path.right.unshift({ x: tmp.x, y: tmp.y });
+			
 			lastp = currp;
 			lastv = currv;
 		}
+		
+		
+		//add the last points
+		tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
+		path.left.push({ x: tmp.x, y: tmp.y });
+		
+		tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
+		path.right.unshift({ x: tmp.x, y: tmp.y });
+		
+		// combine them into one full path
+		result = path.left.concat(path.right);
+		result.push(path.left[0]);
 		return result;
 	}
 	
@@ -124,9 +107,11 @@
 			prevprev = null, curr = prev, len = points.length;
 		for (var i = 1, l = len; i < l; ++i) {
 			curr = points[i];
+
 			if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
 				// hack to avoid weird linejoins cutting the line
-				curr.x += 0.1; curr.y += 0.1;
+				curr.x += 0.1; 
+				curr.y += 0.1;
 			}
 			if (smoothing) {
 				var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
@@ -140,6 +125,19 @@
 		if (smoothing) {
 			ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
 		}
+	}
+	
+	function distance(p1, p2) {
+		return sqrt(pow2(p1.x - p2.x) + pow2(p1.y - p2.y));
+	}
+	
+	function avg(arr) {
+		var sum = 0,
+			len = arr.length;
+		for (var i = 0, l = len; i < l; i++) {
+			sum += +arr[i];
+		}
+		return sum/len;
 	}
 })(TeledrawCanvas);
 
