@@ -31,6 +31,7 @@
 		shadowOffset: 5000,
 		
 		enableZoom: TRUE,
+		enableKeyboardShortcuts: TRUE,
 		enableWacomSupport: TRUE,
 		
 		// default limits
