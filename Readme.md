@@ -165,6 +165,13 @@ Teledraw Canvas provides a ton of flexibility when it comes to adding new tools.
 
 Coming soon!
 
+## Changelog
+
+### 0.11.0
+* Added keyboard shortcut support
+* Several bugfixes
+
+
 
 ## License 
 
