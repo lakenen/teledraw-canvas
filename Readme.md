@@ -167,9 +167,10 @@ Coming soon!
 
 ## Changelog
 
-*0.11.1*
+_0.11.1_
 * Fixed rendering issue when using shift key with some tools
-*0.11.0*
+
+_0.11.0_
 * Added keyboard shortcut support
 * Several bugfixes
 
