@@ -167,11 +167,15 @@ Coming soon!
 
 ## Changelog
 
-_0.11.1_
+__0.11.2__
+* Fixed a bug where user could undo while drawing
+
+__0.11.1__
 * Fixed rendering issue when using shift key with some tools
 
-_0.11.0_
+__0.11.0__
 * Added keyboard shortcut support
+* Added destroy() API call to prevent event leaks when removing a canvas
 * Several bugfixes
 
 

@@ -220,8 +220,8 @@
     		if (!state.enableKeyboardShortcuts) {
     			return;
     		}
-	    	var elt = document.activeElement.nodeName.toLowerCase();
-	    	if (name === 'input' || name === 'textarea') {
+	    	var eltName = document.activeElement.nodeName.toLowerCase();
+	    	if (eltName === 'input' || eltName === 'textarea') {
 	    		return;
 	    	} else {
 		    	switch (e.keyCode) {
@@ -252,6 +252,9 @@
 		    			//Canvas.getTool().setFill(e.shiftKey === true);
 		    			break;
 		    		case 90: // z
+		    			if (state.mouseDown) {
+		    				return false;
+		    			}
 		    			if (e.metaKey || e.ctrlKey) {
 	    	    			if (e.shiftKey) {
 	    	    				self.redo();
