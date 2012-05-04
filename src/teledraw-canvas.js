@@ -170,7 +170,13 @@
 			state.tool.dblclick(pt);
 		}
 		
+		var lastmove = 0;
 	    function mouseMove(e) {
+	    	if (Date.now() - lastmove < 25) {
+	    		return FALSE;
+	    	}
+	    	lastmove = Date.now();
+	    
 	    	if (e.type == 'touchmove' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
@@ -196,7 +202,7 @@
 			state.mouseDown = TRUE;
 			if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
 				self.setTool('eraser');
-				state.wacomWasEraser = true;
+				state.wacomWasEraser = TRUE;
 			}
 			state.tool.down(pt);
 			self.trigger('mousedown', pt, e);
@@ -217,9 +223,9 @@
 			state.tool.up(state.last);
 			self.trigger('mouseup', state.last, e);
         	
-			if (state.wacomWasEraser === true) {
+			if (state.wacomWasEraser === TRUE) {
 				self.previousTool();
-				state.wacomWasEraser = false;
+				state.wacomWasEraser = FALSE;
 			}
         
         	document.onselectstart = function() { return TRUE; };
@@ -245,18 +251,16 @@
 		function gestureEnd(evt) {
 		
 		}
-	    var lastpressure;
+	    var lastpressure = 0;
 		function getCoord(e) {
 	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure;
+				pressure = null;
 			if (state.enableWacomSupport) {
-				if (lastpressure !== false) {
-					pressure = lastpressure;
-					lastpressure = false;
-				} else {
-					pressure = lastpressure = wacomGetPressure();
+				if (Date.now() - lastpressure > 25) {
+					lastpressure = Date.now();
+					pressure = wacomGetPressure();
 				}
 			}
 
@@ -273,7 +277,7 @@
 	function getOffset(el) {
 		var _x = 0;
 		var _y = 0;
-		while( el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop) ) {
+		while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
 			_x += el.offsetLeft - el.scrollLeft;
 			_y += el.offsetTop - el.scrollTop;
 			el = el.offsetParent;

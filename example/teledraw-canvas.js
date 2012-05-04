@@ -33,11 +33,13 @@ var TRUE = true,
 	UNDEFINED,
 	math = Math,
 	abs = math.abs, 
+	sqrt = math.sqrt,
 	floor = math.floor, 
 	round = math.round,
 	min = math.min, 
 	max = math.max,
 	pow = math.pow,
+	pow2 = function (x) { return pow(x, 2); },
 	clamp;
 
 TeledrawCanvas = function (elt, opt) {
@@ -1709,6 +1711,9 @@ function contains(container, maybe) {
 **/
 
 function Vector(x, y, z) {
+	if (x instanceof Vector) {
+		return Vector.create(x);
+	}
 	this.x = x || 0;
 	this.y = y || 0;
 	this.z = z || 0;
@@ -2187,7 +2192,13 @@ Vector.create = function (o) {
 			state.tool.dblclick(pt);
 		}
 		
+		var lastmove = 0;
 	    function mouseMove(e) {
+	    	if (Date.now() - lastmove < 25) {
+	    		return FALSE;
+	    	}
+	    	lastmove = Date.now();
+	    
 	    	if (e.type == 'touchmove' && e.touches.length > 1) {
 	    		return TRUE;
 	    	}
@@ -2213,7 +2224,7 @@ Vector.create = function (o) {
 			state.mouseDown = TRUE;
 			if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
 				self.setTool('eraser');
-				state.wacomWasEraser = true;
+				state.wacomWasEraser = TRUE;
 			}
 			state.tool.down(pt);
 			self.trigger('mousedown', pt, e);
@@ -2234,9 +2245,9 @@ Vector.create = function (o) {
 			state.tool.up(state.last);
 			self.trigger('mouseup', state.last, e);
         	
-			if (state.wacomWasEraser === true) {
+			if (state.wacomWasEraser === TRUE) {
 				self.previousTool();
-				state.wacomWasEraser = false;
+				state.wacomWasEraser = FALSE;
 			}
         
         	document.onselectstart = function() { return TRUE; };
@@ -2262,18 +2273,16 @@ Vector.create = function (o) {
 		function gestureEnd(evt) {
 		
 		}
-	    var lastpressure;
+	    var lastpressure = 0;
 		function getCoord(e) {
 	        var off = getOffset(element),
 	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
 				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure;
+				pressure = null;
 			if (state.enableWacomSupport) {
-				if (lastpressure !== false) {
-					pressure = lastpressure;
-					lastpressure = false;
-				} else {
-					pressure = lastpressure = wacomGetPressure();
+				if (Date.now() - lastpressure > 25) {
+					lastpressure = Date.now();
+					pressure = wacomGetPressure();
 				}
 			}
 
@@ -2290,7 +2299,7 @@ Vector.create = function (o) {
 	function getOffset(el) {
 		var _x = 0;
 		var _y = 0;
-		while( el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop) ) {
+		while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
 			_x += el.offsetLeft - el.scrollLeft;
 			_y += el.offsetTop - el.scrollTop;
 			el = el.offsetParent;
@@ -3385,7 +3394,7 @@ Vector.create = function (o) {
 				case 'round':
 					ctx.beginPath();
 					if (points[0].p) {
-						lineWidth *= points[0].p;
+						lineWidth *= points[0].p * 2;
 					}
 					ctx.arc(points[0].x, points[0].y, lineWidth / 2, 0, 2 * Math.PI, true);
 					ctx.closePath();
@@ -3399,41 +3408,11 @@ Vector.create = function (o) {
 	        ctx.lineCap = this.lineCap;
 	        ctx.lineWidth = lineWidth;
 	    
-	    	if (points[0].p) {
-				var pressurePoints = generatePressurePoints(points, lineWidth);
-				var length = pressurePoints.left.length;
-	    		pressurePoints.right.reverse();
-	    		
-				if (pressurePoints.left.length === 0 || 
-					pressurePoints.left.length !== pressurePoints.right.length)
-				{
-					return;
-				}
+	    	if (points[0].p || points[1].p) {
 				ctx.beginPath();
-	    		drawLine(ctx, pressurePoints.left, this.smoothing);
-	    		ctx.lineTo(pressurePoints.right[0].x, pressurePoints.right[0].y);
-	    		drawLine(ctx, pressurePoints.right, this.smoothing);
-	    		ctx.lineTo(pressurePoints.left[0].x, pressurePoints.left[0].y);
+	    		drawLine(ctx, generatePressurePoints(points, lineWidth), this.smoothing);
 	    		ctx.closePath();
 	    		ctx.fill();
-	    		
-	    		/*
-	    		ctx.beginPath();
-	    		var pt2 = new Vector(pressurePoints.right[0].x,pressurePoints.right[0].y),
-	    			pt1 = new Vector(pressurePoints.left[length-1].x,pressurePoints.left[length-1].y);
-	    		var pt = points[points.length-2];
-	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
-	    		ctx.closePath();
-	    		ctx.fill();
-
-	    		
-				ctx.beginPath();
-	    		pt1 = new Vector(pressurePoints.right[length-1].x,pressurePoints.right[length-1].y);
-	    		pt2 = new Vector(pressurePoints.left[0].x,pressurePoints.left[0].y);
-	    		pt = points[0];
-	    		ctx.arc(pt.x, pt.y, Vector.subtract(pt2,pt1).magnitude()/2, Vector.subtract(pt2,pt1).direction(), Vector.subtract(pt1,pt2).direction());
-	    		ctx.closePath();
-	    		ctx.fill();*/
 	    	} else {
 				ctx.beginPath();
 				drawLine(ctx, points, this.smoothing);
@@ -3443,11 +3422,11 @@ Vector.create = function (o) {
 	};
 	
 	function generatePressurePoints(points, thickness) {
-		var result = {left:[], right:[]},
+		var path = {left:[], right:[]},
 			len = points.length,
 			lastp = points[0],
 			lastv = new Vector(lastp.x, lastp.y), 
-			currp, currv, tmp;
+			currp, currv, left, right, tmp;
 		for (var i = 1, l = len; i < l; ++i) {
 			currp = points[i];
 			
@@ -3455,17 +3434,30 @@ Vector.create = function (o) {
 			if (currp.x === lastp.x && currp.y === lastp.y) continue;
 			
 			currv = new Vector(currp.x, currp.y);
+			left = Vector.subtract(currv, lastv).unit().rotateZ(Math.PI/2);
+			right = Vector.subtract(currv, lastv).unit().rotateZ(-Math.PI/2);
 			
-			tmp = Vector.subtract(currv, lastv);
-			tmp.rotateZ(Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
-			result.left.push({ x: tmp.x, y: tmp.y });
+			tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
+			path.left.push({ x: tmp.x, y: tmp.y });
 			
-			tmp = Vector.subtract(currv, lastv);
-			tmp.rotateZ(-Math.PI/2).unit().scale(lastp.p*thickness).add(lastv);
-			result.right.push({ x: tmp.x, y: tmp.y });
+			tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
+			path.right.unshift({ x: tmp.x, y: tmp.y });
+			
 			lastp = currp;
 			lastv = currv;
 		}
+		
+		
+		//add the last points
+		tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
+		path.left.push({ x: tmp.x, y: tmp.y });
+		
+		tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
+		path.right.unshift({ x: tmp.x, y: tmp.y });
+		
+		// combine them into one full path
+		result = path.left.concat(path.right);
+		result.push(path.left[0]);
 		return result;
 	}
 	
@@ -3476,9 +3468,11 @@ Vector.create = function (o) {
 			prevprev = null, curr = prev, len = points.length;
 		for (var i = 1, l = len; i < l; ++i) {
 			curr = points[i];
+
 			if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
 				// hack to avoid weird linejoins cutting the line
-				curr.x += 0.1; curr.y += 0.1;
+				curr.x += 0.1; 
+				curr.y += 0.1;
 			}
 			if (smoothing) {
 				var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
@@ -3492,6 +3486,19 @@ Vector.create = function (o) {
 		if (smoothing) {
 			ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
 		}
+	}
+	
+	function distance(p1, p2) {
+		return sqrt(pow2(p1.x - p2.x) + pow2(p1.y - p2.y));
+	}
+	
+	function avg(arr) {
+		var sum = 0,
+			len = arr.length;
+		for (var i = 0, l = len; i < l; i++) {
+			sum += +arr[i];
+		}
+		return sum/len;
 	}
 })(TeledrawCanvas);
 
