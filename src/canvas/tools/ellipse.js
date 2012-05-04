@@ -9,26 +9,6 @@
 	EllipseStrokePrototype.bgAlpha = 0;
 	EllipseStrokePrototype.lineWidth = 1;
 	
-	/*
-	Ellipse.prototype.keydown = function (mdown, key) {
-		if (key === 16) {
-			this.shiftKey = true;
-			if (mdown) {
-				this.draw();
-			}
-		}
-	};
-	
-	Ellipse.prototype.keyup = function (mdown, key) {
-		if (key === 16) {
-			this.shiftKey = false;
-			if (mdown) {
-				this.draw();
-			}
-		}
-	};
-	*/
-	
 	EllipseStrokePrototype.start = function (pt) {
 	    this.first = pt;
 	};

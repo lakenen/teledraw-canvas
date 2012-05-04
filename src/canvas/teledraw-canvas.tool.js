@@ -10,8 +10,14 @@
 	Tool.prototype.dblclick = function (pt) {};
 	Tool.prototype.enter = function (mouseDown, pt) {};
 	Tool.prototype.leave = function (mouseDown, pt) {};
-	Tool.prototype.keydown = function (mdown, key) {};
-	Tool.prototype.keyup = function (mdown, key) {};
+	Tool.prototype.keydown = function (mdown, key) {
+		if (key === 16) //shift
+			this.shiftKey = true;
+	};
+	Tool.prototype.keyup = function (mdown, key) {
+		if (key === 16) //shift
+			this.shiftKey = false;
+	};
 	Tool.prototype.preview = function () {};
 	Tool.prototype.alt_down = function () {};
 	Tool.prototype.alt_up = function () {};
@@ -86,6 +92,13 @@
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas,
 	    		strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
+	    	if (this.shiftKey) {
+	    		// hack to avoid bugginess when shift keying for ellipse, line and rect
+	    		stroke.tl.x = stroke.tl.y = 0;
+	    		stroke.br.x = canvas.width;
+	    		stroke.br.y = canvas.height;
+	    		return;
+	    	}
 	    	if (pt.x - strokeSize < stroke.tl.x) {
 	    		stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
 	    	}

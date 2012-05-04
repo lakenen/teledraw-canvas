@@ -231,6 +231,9 @@
 		    		case 70: // f
 		    			self.setTool('fill');
 		    			break;
+		    		case 71: // g
+		    			self.setTool('grab');
+		    			break;
 		    		case 73: // i
 		    			self.setTool('eyedropper');
 		    			break;
@@ -273,13 +276,13 @@
 		    		case 188: // ,
 		    			if (e.shiftKey) { // <
     	    				// decrease alpha
-		    				self.setAlpha(state.globalAlpha - 0.05);
+		    				self.setAlpha(state.globalAlpha - 0.1);
     	    			}
 		    			break;
 		    		case 190: // .
 		    			if (e.shiftKey) { // >
     	    				// increase alpha
-		    				self.setAlpha(state.globalAlpha + 0.05);
+		    				self.setAlpha(state.globalAlpha + 0.1);
     	    			}
 		    			break;
 		    		case 219: // [

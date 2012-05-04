@@ -1,7 +1,7 @@
 /*!
 
 	Teledraw Canvas
-	Version 0.10.5 (http://semver.org/)
+	Version 0.11.0 (http://semver.org/)
 	Copyright 2012 Cameron Lakenen
 	
 	Permission is hereby granted, free of charge, to any person obtaining
@@ -2053,6 +2053,7 @@ Vector.create = function (o) {
 		shadowOffset: 5000,
 		
 		enableZoom: TRUE,
+		enableKeyboardShortcuts: TRUE,
 		enableWacomSupport: TRUE,
 		
 		// default limits
@@ -2252,6 +2253,9 @@ Vector.create = function (o) {
 		    		case 70: // f
 		    			self.setTool('fill');
 		    			break;
+		    		case 71: // g
+		    			self.setTool('grab');
+		    			break;
 		    		case 73: // i
 		    			self.setTool('eyedropper');
 		    			break;
@@ -2294,13 +2298,13 @@ Vector.create = function (o) {
 		    		case 188: // ,
 		    			if (e.shiftKey) { // <
     	    				// decrease alpha
-		    				self.setAlpha(state.globalAlpha - 0.05);
+		    				self.setAlpha(state.globalAlpha - 0.1);
     	    			}
 		    			break;
 		    		case 190: // .
 		    			if (e.shiftKey) { // >
     	    				// increase alpha
-		    				self.setAlpha(state.globalAlpha + 0.05);
+		    				self.setAlpha(state.globalAlpha + 0.1);
     	    			}
 		    			break;
 		    		case 219: // [
@@ -2958,8 +2962,14 @@ Vector.create = function (o) {
 	Tool.prototype.dblclick = function (pt) {};
 	Tool.prototype.enter = function (mouseDown, pt) {};
 	Tool.prototype.leave = function (mouseDown, pt) {};
-	Tool.prototype.keydown = function (mdown, key) {};
-	Tool.prototype.keyup = function (mdown, key) {};
+	Tool.prototype.keydown = function (mdown, key) {
+		if (key === 16) //shift
+			this.shiftKey = true;
+	};
+	Tool.prototype.keyup = function (mdown, key) {
+		if (key === 16) //shift
+			this.shiftKey = false;
+	};
 	Tool.prototype.preview = function () {};
 	Tool.prototype.alt_down = function () {};
 	Tool.prototype.alt_up = function () {};
@@ -3034,6 +3044,13 @@ Vector.create = function (o) {
 	    	var stroke = this.currentStroke,
 	    		canvas = stroke.ctx.canvas,
 	    		strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
+	    	if (this.shiftKey) {
+	    		// hack to avoid bugginess when shift keying for ellipse, line and rect
+	    		stroke.tl.x = stroke.tl.y = 0;
+	    		stroke.br.x = canvas.width;
+	    		stroke.br.y = canvas.height;
+	    		return;
+	    	}
 	    	if (pt.x - strokeSize < stroke.tl.x) {
 	    		stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
 	    	}
@@ -3068,26 +3085,6 @@ Vector.create = function (o) {
 	EllipseStrokePrototype.bgColor = [255, 255, 255];
 	EllipseStrokePrototype.bgAlpha = 0;
 	EllipseStrokePrototype.lineWidth = 1;
-	
-	/*
-	Ellipse.prototype.keydown = function (mdown, key) {
-		if (key === 16) {
-			this.shiftKey = true;
-			if (mdown) {
-				this.draw();
-			}
-		}
-	};
-	
-	Ellipse.prototype.keyup = function (mdown, key) {
-		if (key === 16) {
-			this.shiftKey = false;
-			if (mdown) {
-				this.draw();
-			}
-		}
-	};
-	*/
 	
 	EllipseStrokePrototype.start = function (pt) {
 	    this.first = pt;
@@ -3400,7 +3397,11 @@ Vector.create = function (o) {
 	Grab.prototype.dblclick = function (pt) {
 		cancelAnimationFrame(this._momentumId);
 	    this.dx = this.dy = 0;
-	    this.canvas.zoom(this.canvas.state.currentZoom*2, pt.xd, pt.yd);
+	    var mult = 2;
+	    if (this.shiftKey) {
+	    	mult /= 4;
+	    }
+	    this.canvas.zoom(this.canvas.state.currentZoom*mult, pt.xd, pt.yd);
 	};
 	
 	Grab.prototype.momentum = function (dx, dy) {
