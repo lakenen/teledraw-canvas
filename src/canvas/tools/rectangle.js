@@ -7,9 +7,6 @@
 	Rectangle.stroke.prototype.bgColor = [255, 255, 255];
 	Rectangle.stroke.prototype.bgAlpha = 0;
 	Rectangle.stroke.prototype.lineWidth = 1;
-	
-	//Rectangle.prototype.keydown = Canvas.ellipse.prototype.keydown;
-	//Rectangle.prototype.keyup = Canvas.ellipse.prototype.keyup;
 
 	Rectangle.stroke.prototype.start = function (pt) {
 	    this.first = pt;

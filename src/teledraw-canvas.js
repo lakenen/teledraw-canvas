@@ -212,11 +212,11 @@
 		}
 		
 		function keyUp(e) {
-    		state.tool.keyup(state.mouse_down, e.keyCode);
+    		state.tool.keyup(state.mouseDown, e.keyCode);
 	    }
 		
 		function keyDown(e) {
-    		state.tool.keydown(state.mouse_down, e.keyCode);
+    		state.tool.keydown(state.mouseDown, e.keyCode);
     		if (!state.enableKeyboardShortcuts) {
     			return;
     		}

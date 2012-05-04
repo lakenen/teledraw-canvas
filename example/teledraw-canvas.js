@@ -2234,11 +2234,11 @@ Vector.create = function (o) {
 		}
 		
 		function keyUp(e) {
-    		state.tool.keyup(state.mouse_down, e.keyCode);
+    		state.tool.keyup(state.mouseDown, e.keyCode);
 	    }
 		
 		function keyDown(e) {
-    		state.tool.keydown(state.mouse_down, e.keyCode);
+    		state.tool.keydown(state.mouseDown, e.keyCode);
     		if (!state.enableKeyboardShortcuts) {
     			return;
     		}
@@ -2962,13 +2962,23 @@ Vector.create = function (o) {
 	Tool.prototype.dblclick = function (pt) {};
 	Tool.prototype.enter = function (mouseDown, pt) {};
 	Tool.prototype.leave = function (mouseDown, pt) {};
-	Tool.prototype.keydown = function (mdown, key) {
-		if (key === 16) //shift
+	Tool.prototype.keydown = function (mouseDown, key) {
+		if (key === 16) {
 			this.shiftKey = true;
+			if (mouseDown) {
+	        	this._updateBoundaries({});
+				this.draw();
+			}
+		}
 	};
-	Tool.prototype.keyup = function (mdown, key) {
-		if (key === 16) //shift
+	Tool.prototype.keyup = function (mouseDown, key) {
+		if (key === 16) {
 			this.shiftKey = false;
+			if (mouseDown) {
+	        	this._updateBoundaries({});
+	        	this.draw();
+	        }
+		}
 	};
 	Tool.prototype.preview = function () {};
 	Tool.prototype.alt_down = function () {};
@@ -3629,9 +3639,6 @@ Vector.create = function (o) {
 	Rectangle.stroke.prototype.bgColor = [255, 255, 255];
 	Rectangle.stroke.prototype.bgAlpha = 0;
 	Rectangle.stroke.prototype.lineWidth = 1;
-	
-	//Rectangle.prototype.keydown = Canvas.ellipse.prototype.keydown;
-	//Rectangle.prototype.keyup = Canvas.ellipse.prototype.keyup;
 
 	Rectangle.stroke.prototype.start = function (pt) {
 	    this.first = pt;

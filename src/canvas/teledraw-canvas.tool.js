@@ -10,13 +10,23 @@
 	Tool.prototype.dblclick = function (pt) {};
 	Tool.prototype.enter = function (mouseDown, pt) {};
 	Tool.prototype.leave = function (mouseDown, pt) {};
-	Tool.prototype.keydown = function (mdown, key) {
-		if (key === 16) //shift
+	Tool.prototype.keydown = function (mouseDown, key) {
+		if (key === 16) {
 			this.shiftKey = true;
+			if (mouseDown) {
+	        	this._updateBoundaries({});
+				this.draw();
+			}
+		}
 	};
-	Tool.prototype.keyup = function (mdown, key) {
-		if (key === 16) //shift
+	Tool.prototype.keyup = function (mouseDown, key) {
+		if (key === 16) {
 			this.shiftKey = false;
+			if (mouseDown) {
+	        	this._updateBoundaries({});
+	        	this.draw();
+	        }
+		}
 	};
 	Tool.prototype.preview = function () {};
 	Tool.prototype.alt_down = function () {};
