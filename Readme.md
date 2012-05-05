@@ -82,9 +82,9 @@ You can modify how the stroke looks, including opacity, size and softness.
 
 ```js
 // relatively small stroke
-canvas.setStrokeSize(1);
+canvas.setStrokeSize(1000);
 // relatively large stroke
-canvas.setStrokeSize(100);
+canvas.setStrokeSize(10000);
 
 // no softness
 canvas.setStrokeSoftness(0);
