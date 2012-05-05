@@ -4,6 +4,11 @@
 (function (TeledrawCanvas) {
 	var Util = function () { return Util; };
 	
+	Util.clear = function (ctx) {
+		var ctx = ctx.canvas ? ctx : /* (canvas) */ctx.getContext('2d');
+		ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+	};
+	
 	// returns a CSS-style rgb(a) string for the given RGBA array
 	Util.cssColor = function (rgba) {
 	    if (rgba.length == 3) {

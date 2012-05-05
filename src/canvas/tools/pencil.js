@@ -4,7 +4,15 @@
 (function (TeledrawCanvas) {
 	var Pencil = TeledrawCanvas.Tool.createTool("pencil", "crosshair");
 	
-	Pencil.stroke.prototype.lineWidth = 1;
+	Pencil.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Pencil.stroke(this.canvas, ctx);
+		stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
+		stroke.draw();
+		return canv;
+	}
+	
 	Pencil.stroke.prototype.lineCap = 'round';
 	Pencil.stroke.prototype.smoothing = true;
 

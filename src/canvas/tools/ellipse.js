@@ -5,6 +5,16 @@
 	var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair"),
 		EllipseStrokePrototype = Ellipse.stroke.prototype;
 
+	Ellipse.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Ellipse.stroke(this.canvas, ctx);
+		stroke.first = { x: 0, y: 0 };
+		stroke.second = { x: canv.width, y: canv.height };
+		stroke.draw();
+		return canv;
+	};
+
 	EllipseStrokePrototype.bgColor = [255, 255, 255];
 	EllipseStrokePrototype.bgAlpha = 0;
 	EllipseStrokePrototype.lineWidth = 1;

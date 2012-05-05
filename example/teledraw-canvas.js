@@ -1793,6 +1793,11 @@ Vector.create = function (o) {
 (function (TeledrawCanvas) {
 	var Util = function () { return Util; };
 	
+	Util.clear = function (canvas) {
+		var ctx = canvas.canvas ? canvas : canvas.getContext('2d');
+		ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+	};
+	
 	// returns a CSS-style rgb(a) string for the given RGBA array
 	Util.cssColor = function (rgba) {
 	    if (rgba.length == 3) {
@@ -2026,7 +2031,7 @@ Vector.create = function (o) {
 	var _id = 0;
 	
 	// global default tool settings
-	var defaults = {
+	var toolDefaults = {
 		tool: 'pencil',
 		alpha: 255,
 		color: [0, 0, 0],
@@ -2129,7 +2134,7 @@ Vector.create = function (o) {
 		return { top: _y, left: _x };
 	}
 	
-	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
+	var Canvas = TeledrawCanvas.Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
 		if (w) c.width = w;
 		if (h) c.height = h;
@@ -2432,13 +2437,15 @@ Vector.create = function (o) {
 	APIprototype.setRGBAArrayColor = function (rgba) {
 		var state = this.state;
 		if (rgba.length === 4) {
-			state.globalAlpha = rgba.pop();
+			this.setAlpha(rgba.pop());
 		}
 		for (var i = rgba.length; i < 3; ++i) {
 			rgba.push(0);
 		}
+		var old = state.color;
 		state.color = rgba;
-		this.updateTool();
+		this.trigger('tool.color', state.color, old);
+		return this;
 	};
 	
 	APIprototype.updateTool = function () {
@@ -2540,31 +2547,31 @@ Vector.create = function (o) {
 			self.history.checkpoint();
 		}
 		self.updateDisplayCanvas();
+		self.trigger('clear');
 		return self;
 	};
 	
 	// resets the default tool and properties
 	APIprototype.defaults = function () {
 		var self = this;
-		self.setTool('pencil');
-		self.setAlpha(defaults.alpha);
-		self.setColor(defaults.color);
-		self.setStrokeSize(defaults.strokeSize);
-		self.setStrokeSoftness(defaults.strokeSoftness);
+		self.setTool(toolDefaults.tool);
+		self.setAlpha(toolDefaults.alpha);
+		self.setColor(toolDefaults.color);
+		self.setStrokeSize(toolDefaults.strokeSize);
+		self.setStrokeSoftness(toolDefaults.strokeSoftness);
 		return self;
 	};
 	
 	// returns a data url (image/png) of the canvas,
-	// optionally a portion of the canvas specified by x, y, w, h
-	APIprototype.toDataURL = function (x, y, w, h) {
-		if (w && h) {
-			w = parseInt(w);
-			h = parseInt(h);
-			x = x !== UNDEFINED ? x : 0;
-			y = y !== UNDEFINED ? y : 0;
-			
-			var tmpcanvas = this.getTempCanvas(w, h);
-			tmpcanvas.getContext('2d').drawImage(this.canvas(), x, y, w, h, 0, 0, w, h);
+	// optionally a portion of the canvas specified by sx, sy, sw, sh, and output size by dw, dh
+	APIprototype.toDataURL = function (sx, sy, sw, sh, dw, dh) {
+		if (arguments.length >= 4) {
+			sx = sx || 0;
+			sy = sy || 0;
+			dw = dw || sw;
+			dh = dh || sh;
+			var tmpcanvas = this.getTempCanvas(dw, dh);
+			tmpcanvas.getContext('2d').drawImage(this.canvas(), sx, sy, sw, sh, 0, 0, dw, dh);
 			return tmpcanvas.toDataURL();
 		}
 		return this.canvas().toDataURL();
@@ -2622,7 +2629,7 @@ Vector.create = function (o) {
 		return this;
 	};
 	
-	// returns the current color in the form [r, g, b, a] (where each can be [0,255])
+	// returns the current color in the form [r, g, b, a], e.g. [255, 0, 0, 0.5]
 	APIprototype.getColor = function () {
 	    return this.state.color.slice();
 	};
@@ -2638,7 +2645,9 @@ Vector.create = function (o) {
 	
 	// sets the current alpha to a, where a is a number in [0,1]
 	APIprototype.setAlpha = function (a) {
+		var old = this.state.globalAlpha;
 		this.state.globalAlpha = clamp(a, 0, 1);
+		this.trigger('tool.alpha', this.state.globalAlpha, old);
 		return this;
 	};
 	
@@ -2650,15 +2659,19 @@ Vector.create = function (o) {
 	// sets the current stroke size to s, where a is a number in [minStrokeSize, maxStrokeSize]
 	// lineWidth = 1 + floor(pow(strokeSize / 1000.0, 2));
 	APIprototype.setStrokeSize = function (s) {
+		var old = this.state.strokeSize;
 		this.state.strokeSize = clamp(s, this.state.minStrokeSize, this.state.maxStrokeSize);
 		this.updateTool();
+		this.trigger('tool.size', this.state.strokeSize, old);
 		return this;
 	};
 	
 	// sets the current stroke size to s, where a is a number in [minStrokeSoftness, maxStrokeSoftness]
 	APIprototype.setStrokeSoftness = function (s) {
+		var old = this.state.strokeSoftness;
 		this.state.strokeSoftness = clamp(s, this.state.minStrokeSoftness, this.state.maxStrokeSoftness);
 		this.updateTool();
+		this.trigger('tool.softness', this.state.strokeSoftness, old);
 		return this;
 	};
 	
@@ -2673,7 +2686,7 @@ Vector.create = function (o) {
 			throw new Error('Tool "'+name+'" not defined.');
 		}
 		this.state.tool = new TeledrawCanvas.tools[name](this);
-		this.updateTool();
+		this.trigger('tool.change', this.state.currentTool, this.state.previousTool);
 		return this;
 	};
 	
@@ -2685,12 +2698,14 @@ Vector.create = function (o) {
 	// undo to the last history checkpoint (if available)
 	APIprototype.undo = function () {
 		this.history.undo();
+		this.trigger('history undo', this.history.past.length, this.history.future.length);
 		return this;
 	};
 	
 	// redo to the next history checkpoint (if available)
 	APIprototype.redo = function () {
 		this.history.redo();
+		this.trigger('history redo', this.history.past.length, this.history.future.length);
 		return this;
 	};
 	
@@ -2709,6 +2724,7 @@ Vector.create = function (o) {
 		}
 		self._displayCanvas.width = self.state.width = w;
 		self._displayCanvas.height = self.state.height = h;
+		this.trigger('resize', w, h);
 		return self.zoom(self.state.currentZoom);
 	};
 	
@@ -2779,7 +2795,7 @@ Vector.create = function (o) {
 		x = floor(clamp(x, 0, maxWidth));
 		y = floor(clamp(y, 0, maxHeight))
 		self.state.currentOffset = { x: x, y: y };
-		self.trigger('pan', self.state.currentOffset);
+		self.trigger('pan', self.state.currentOffset, { x: currentX, y: currentY });
 		self.updateDisplayCanvas();
 		return self;
 	};
@@ -2983,15 +2999,17 @@ Vector.create = function (o) {
 	        }
 		}
 	};
-	Tool.prototype.preview = function () {};
-	Tool.prototype.alt_down = function () {};
-	Tool.prototype.alt_up = function () {};
+	
+	// should return a preview image (canvas) for this tool
+	Tool.prototype.preview = function (w, h) {
+		return new TeledrawCanvas.Canvas(w || 100, h || 100);
+	};
 	
 	// A factory for creating tools
 	Tool.createTool = function (name, cursor, ctor) {
-		var Stroke = function (canvas) {
+		var Stroke = function (canvas, ctx) {
 			this.canvas = canvas;
-			this.ctx = canvas.ctx();
+			this.ctx = ctx || canvas.ctx();
 	        this.color = canvas.getColor();
 	        this.color.push(canvas.getAlpha());
 	        this.points = [];
@@ -3095,6 +3113,16 @@ Vector.create = function (o) {
 	var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair"),
 		EllipseStrokePrototype = Ellipse.stroke.prototype;
 
+	Ellipse.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Ellipse.stroke(this.canvas, ctx);
+		stroke.first = { x: 0, y: 0 };
+		stroke.second = { x: canv.width, y: canv.height };
+		stroke.draw();
+		return canv;
+	};
+
 	EllipseStrokePrototype.bgColor = [255, 255, 255];
 	EllipseStrokePrototype.bgAlpha = 0;
 	EllipseStrokePrototype.lineWidth = 1;
@@ -3177,6 +3205,18 @@ Vector.create = function (o) {
 (function (TeledrawCanvas) {
 	var Eraser = TeledrawCanvas.Tool.createTool("eraser", "crosshair");
 	
+	Eraser.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		ctx.fillStyle = 'black';
+		ctx.fillRect(0, 0, canv.width, canv.height);
+		var stroke = new Eraser.stroke(this.canvas, ctx);
+		stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
+		stroke.draw();
+		return canv;
+	}
+	
+	
 	Eraser.stroke.prototype.lineWidth = 1;
 	Eraser.stroke.prototype.lineCap = 'round';
 
@@ -3206,6 +3246,14 @@ Vector.create = function (o) {
 		}
 	};
 	var EyeDropper = TeledrawCanvas.Tool.createTool("eyedropper", "crosshair", ctor);
+	
+	EyeDropper.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color);
+		ctx.fillRect(0, 0, canv.width, canv.height);
+		return canv;
+	};
 	
 	EyeDropper.prototype.pick = function (pt) {
 		var previewContainer = this.previewContainer,
@@ -3435,13 +3483,17 @@ Vector.create = function (o) {
 (function (TeledrawCanvas) {
 	var Line = TeledrawCanvas.Tool.createTool("line", "crosshair");
 	
-	//Line.prototype.keydown = Canvas.ellipse.prototype.keydown;
-	//Line.prototype.keyup = Canvas.ellipse.prototype.keyup;
+	Line.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Line.stroke(this.canvas, ctx);
+		stroke.first = { x: 0, y: 0 };
+		stroke.second = { x: canv.width, y: canv.height };
+		stroke.draw();
+		return canv;
+	}	
 	
-	Line.stroke.prototype.lineWidth = 1;
 	Line.stroke.prototype.lineCap = 'round';
-	Line.stroke.prototype.bgColor = [255, 255, 255];
-	Line.stroke.prototype.bgAlpha = 0;
 	
 	Line.stroke.prototype.start = function (pt) {
 	    this.first = pt;
@@ -3496,7 +3548,15 @@ Vector.create = function (o) {
 (function (TeledrawCanvas) {
 	var Pencil = TeledrawCanvas.Tool.createTool("pencil", "crosshair");
 	
-	Pencil.stroke.prototype.lineWidth = 1;
+	Pencil.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Pencil.stroke(this.canvas, ctx);
+		stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
+		stroke.draw();
+		return canv;
+	}
+	
 	Pencil.stroke.prototype.lineCap = 'round';
 	Pencil.stroke.prototype.smoothing = true;
 
@@ -3638,6 +3698,16 @@ Vector.create = function (o) {
  */
 (function (TeledrawCanvas) {
 	var Rectangle = TeledrawCanvas.Tool.createTool("rectangle", "crosshair");
+	
+	Rectangle.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Rectangle.stroke(this.canvas, ctx);
+		stroke.first = { x: 0, y: 0 };
+		stroke.second = { x: canv.width, y: canv.height };
+		stroke.draw();
+		return canv;
+	};
 
 	Rectangle.stroke.prototype.bgColor = [255, 255, 255];
 	Rectangle.stroke.prototype.bgAlpha = 0;

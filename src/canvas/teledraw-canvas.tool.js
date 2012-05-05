@@ -28,15 +28,17 @@
 	        }
 		}
 	};
-	Tool.prototype.preview = function () {};
-	Tool.prototype.alt_down = function () {};
-	Tool.prototype.alt_up = function () {};
+	
+	// should return a preview image (canvas) for this tool
+	Tool.prototype.preview = function (w, h) {
+		return new TeledrawCanvas.Canvas(w || 100, h || 100);
+	};
 	
 	// A factory for creating tools
 	Tool.createTool = function (name, cursor, ctor) {
-		var Stroke = function (canvas) {
+		var Stroke = function (canvas, ctx) {
 			this.canvas = canvas;
-			this.ctx = canvas.ctx();
+			this.ctx = ctx || canvas.ctx();
 	        this.color = canvas.getColor();
 	        this.color.push(canvas.getAlpha());
 	        this.points = [];

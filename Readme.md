@@ -167,6 +167,10 @@ Coming soon!
 
 ## Changelog
 
+__0.12.0__
+* Added preview functionality to all the tools
+* Added event triggers where appropriate (tool change, history change, etc)
+
 __0.11.2__
 * Fixed a bug where user could undo while drawing
 

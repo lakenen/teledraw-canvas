@@ -18,6 +18,14 @@
 	};
 	var EyeDropper = TeledrawCanvas.Tool.createTool("eyedropper", "crosshair", ctor);
 	
+	EyeDropper.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color);
+		ctx.fillRect(0, 0, canv.width, canv.height);
+		return canv;
+	};
+	
 	EyeDropper.prototype.pick = function (pt) {
 		var previewContainer = this.previewContainer,
 			lightness,

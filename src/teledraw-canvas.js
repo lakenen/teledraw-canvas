@@ -4,7 +4,7 @@
 	var _id = 0;
 	
 	// global default tool settings
-	var defaults = {
+	var toolDefaults = {
 		tool: 'pencil',
 		alpha: 255,
 		color: [0, 0, 0],
@@ -107,7 +107,7 @@
 		return { top: _y, left: _x };
 	}
 	
-	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
+	var Canvas = TeledrawCanvas.Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
 		var c = document.createElement('canvas');
 		if (w) c.width = w;
 		if (h) c.height = h;
@@ -410,13 +410,15 @@
 	APIprototype.setRGBAArrayColor = function (rgba) {
 		var state = this.state;
 		if (rgba.length === 4) {
-			state.globalAlpha = rgba.pop();
+			this.setAlpha(rgba.pop());
 		}
 		for (var i = rgba.length; i < 3; ++i) {
 			rgba.push(0);
 		}
+		var old = state.color;
 		state.color = rgba;
-		this.updateTool();
+		this.trigger('tool.color', state.color, old);
+		return this;
 	};
 	
 	APIprototype.updateTool = function () {
@@ -437,7 +439,7 @@
 			dh = dctx.canvas.height,
 			sw = floor(dw / zoom),
 			sh = floor(dh / zoom);
-		dctx.clearRect(0, 0, dw, dh);
+		TeledrawCanvas.util.clear(dctx);
 		if (noTrigger !== true) this.trigger('display.update:before');
 		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
 		if (noTrigger !== true) this.trigger('display.update:after');
@@ -511,38 +513,37 @@
 	
 	// clears the canvas and (unless noCheckpoint===TRUE) pushes to the undoable history
 	APIprototype.clear = function (noCheckpoint) {
-	    var self = this,
-			ctx = self.ctx();
-		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	    var self = this;
+		TeledrawCanvas.util.clear(self.ctx());
 		if (noCheckpoint !== TRUE) {
 			self.history.checkpoint();
 		}
 		self.updateDisplayCanvas();
+		self.trigger('clear');
 		return self;
 	};
 	
 	// resets the default tool and properties
 	APIprototype.defaults = function () {
 		var self = this;
-		self.setTool('pencil');
-		self.setAlpha(defaults.alpha);
-		self.setColor(defaults.color);
-		self.setStrokeSize(defaults.strokeSize);
-		self.setStrokeSoftness(defaults.strokeSoftness);
+		self.setTool(toolDefaults.tool);
+		self.setAlpha(toolDefaults.alpha);
+		self.setColor(toolDefaults.color);
+		self.setStrokeSize(toolDefaults.strokeSize);
+		self.setStrokeSoftness(toolDefaults.strokeSoftness);
 		return self;
 	};
 	
 	// returns a data url (image/png) of the canvas,
-	// optionally a portion of the canvas specified by x, y, w, h
-	APIprototype.toDataURL = function (x, y, w, h) {
-		if (w && h) {
-			w = parseInt(w);
-			h = parseInt(h);
-			x = x !== UNDEFINED ? x : 0;
-			y = y !== UNDEFINED ? y : 0;
-			
-			var tmpcanvas = this.getTempCanvas(w, h);
-			tmpcanvas.getContext('2d').drawImage(this.canvas(), x, y, w, h, 0, 0, w, h);
+	// optionally a portion of the canvas specified by sx, sy, sw, sh, and output size by dw, dh
+	APIprototype.toDataURL = function (sx, sy, sw, sh, dw, dh) {
+		if (arguments.length >= 4) {
+			sx = sx || 0;
+			sy = sy || 0;
+			dw = dw || sw;
+			dh = dh || sh;
+			var tmpcanvas = this.getTempCanvas(dw, dh);
+			tmpcanvas.getContext('2d').drawImage(this.canvas(), sx, sy, sw, sh, 0, 0, dw, dh);
 			return tmpcanvas.toDataURL();
 		}
 		return this.canvas().toDataURL();
@@ -600,7 +601,7 @@
 		return this;
 	};
 	
-	// returns the current color in the form [r, g, b, a] (where each can be [0,255])
+	// returns the current color in the form [r, g, b, a], e.g. [255, 0, 0, 0.5]
 	APIprototype.getColor = function () {
 	    return this.state.color.slice();
 	};
@@ -616,7 +617,9 @@
 	
 	// sets the current alpha to a, where a is a number in [0,1]
 	APIprototype.setAlpha = function (a) {
+		var old = this.state.globalAlpha;
 		this.state.globalAlpha = clamp(a, 0, 1);
+		this.trigger('tool.alpha', this.state.globalAlpha, old);
 		return this;
 	};
 	
@@ -628,15 +631,19 @@
 	// sets the current stroke size to s, where a is a number in [minStrokeSize, maxStrokeSize]
 	// lineWidth = 1 + floor(pow(strokeSize / 1000.0, 2));
 	APIprototype.setStrokeSize = function (s) {
+		var old = this.state.strokeSize;
 		this.state.strokeSize = clamp(s, this.state.minStrokeSize, this.state.maxStrokeSize);
 		this.updateTool();
+		this.trigger('tool.size', this.state.strokeSize, old);
 		return this;
 	};
 	
 	// sets the current stroke size to s, where a is a number in [minStrokeSoftness, maxStrokeSoftness]
 	APIprototype.setStrokeSoftness = function (s) {
+		var old = this.state.strokeSoftness;
 		this.state.strokeSoftness = clamp(s, this.state.minStrokeSoftness, this.state.maxStrokeSoftness);
 		this.updateTool();
+		this.trigger('tool.softness', this.state.strokeSoftness, old);
 		return this;
 	};
 	
@@ -651,7 +658,7 @@
 			throw new Error('Tool "'+name+'" not defined.');
 		}
 		this.state.tool = new TeledrawCanvas.tools[name](this);
-		this.updateTool();
+		this.trigger('tool.change', this.state.currentTool, this.state.previousTool);
 		return this;
 	};
 	
@@ -663,12 +670,14 @@
 	// undo to the last history checkpoint (if available)
 	APIprototype.undo = function () {
 		this.history.undo();
+		this.trigger('history undo', this.history.past.length, this.history.future.length);
 		return this;
 	};
 	
 	// redo to the next history checkpoint (if available)
 	APIprototype.redo = function () {
 		this.history.redo();
+		this.trigger('history redo', this.history.past.length, this.history.future.length);
 		return this;
 	};
 	
@@ -687,6 +696,7 @@
 		}
 		self._displayCanvas.width = self.state.width = w;
 		self._displayCanvas.height = self.state.height = h;
+		this.trigger('resize', w, h);
 		return self.zoom(self.state.currentZoom);
 	};
 	
@@ -757,7 +767,7 @@
 		x = floor(clamp(x, 0, maxWidth));
 		y = floor(clamp(y, 0, maxHeight))
 		self.state.currentOffset = { x: x, y: y };
-		self.trigger('pan', self.state.currentOffset);
+		self.trigger('pan', self.state.currentOffset, { x: currentX, y: currentY });
 		self.updateDisplayCanvas();
 		return self;
 	};

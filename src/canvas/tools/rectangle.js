@@ -3,6 +3,16 @@
  */
 (function (TeledrawCanvas) {
 	var Rectangle = TeledrawCanvas.Tool.createTool("rectangle", "crosshair");
+	
+	Rectangle.prototype.preview = function () {
+		var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+		var ctx = canv.getContext('2d');
+		var stroke = new Rectangle.stroke(this.canvas, ctx);
+		stroke.first = { x: 0, y: 0 };
+		stroke.second = { x: canv.width, y: canv.height };
+		stroke.draw();
+		return canv;
+	};
 
 	Rectangle.stroke.prototype.bgColor = [255, 255, 255];
 	Rectangle.stroke.prototype.bgAlpha = 0;
