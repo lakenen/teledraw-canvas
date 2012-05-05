@@ -26,10 +26,6 @@
         this.second = b;
     };
 
-    Rectangle.stroke.prototype.end = function (pt) {
-        this.second = pt;
-    };
-
     Rectangle.stroke.prototype.draw = function () {
         if (!this.first || !this.second) return;
         var first = this.first,
@@ -76,4 +72,20 @@
         ctx.lineTo(first.x, second.y);
         ctx.lineTo(first.x, first.y);
     }
+
+
+    var FilledRectangle = TeledrawCanvas.Tool.createTool("filled-rectangle", "crosshair");
+
+    FilledRectangle.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new FilledRectangle.stroke(this.canvas, ctx);
+        stroke.first = { x: 0, y: 0 };
+        stroke.second = { x: canv.width, y: canv.height };
+        stroke.draw();
+        return canv;
+    };
+    _.extend(FilledRectangle.stroke.prototype, Rectangle.stroke.prototype);
+    FilledRectangle.prototype.fill = true;
+
 })(TeledrawCanvas);

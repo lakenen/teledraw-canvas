@@ -3,12 +3,16 @@
  */
 (function (TeledrawCanvas) {
     var Fill = TeledrawCanvas.Tool.createTool("fill", "crosshair");
-    var abs = Math.abs;
+
+    Fill.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.canvas.getColor());
+        ctx.fillRect(0, 0, canv.width, canv.height);
+        return canv;
+    }
 
     Fill.blur = true;
-    Fill.stroke.prototype.bgColor = [255, 255, 255];
-    Fill.stroke.prototype.bgAlpha = 255;
-
 
     Fill.stroke.prototype.end = function (target) {
         var w = this.ctx.canvas.width, h = this.ctx.canvas.height;

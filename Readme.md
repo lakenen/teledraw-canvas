@@ -167,6 +167,9 @@ Coming soon!
 
 ## Changelog
 
+__0.13.0__
+* Added filled versions of ellipse and rectangle tools
+
 __0.12.0__
 * Added preview functionality to all the tools
 * Added event triggers where appropriate (tool change, history change, etc)

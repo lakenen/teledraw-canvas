@@ -21,20 +21,19 @@
     EyeDropper.prototype.preview = function () {
         var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
         var ctx = canv.getContext('2d');
-        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color);
+        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color || [0,0,0,0]);
         ctx.fillRect(0, 0, canv.width, canv.height);
         return canv;
     };
 
     EyeDropper.prototype.pick = function (pt) {
-        var nope, lightness,
+        var none, lightness,
             previewContainer = this.previewContainer,
             left = this.canvas.element.offsetLeft,
             top = this.canvas.element.offsetTop,
             pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
-
         this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
-        lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
+        var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
         _.extend(previewContainer.style, {
             left: (left + pt.xd + 15) + 'px',
             top: (top + pt.yd + 5) + 'px',
@@ -44,7 +43,7 @@
         if (this.canvas.state.mouseOver) {
             // hack for chrome, since it seems to ignore this and not redraw for some reason...
             previewContainer.style.display='none';
-            nope = previewContainer.offsetHeight;
+            none = previewContainer.offsetHeight; // no need to store this anywhere, the reference is enough
             previewContainer.style.display='block';
         } else {
             previewContainer.style.display = 'none';
