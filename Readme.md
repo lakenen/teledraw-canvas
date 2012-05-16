@@ -167,6 +167,9 @@ Coming soon!
 
 ## Changelog
 
+__0.13.1__
+* Fixed preview for filled versions of ellipse and rectangle tools
+
 __0.13.0__
 * Added filled versions of ellipse and rectangle tools
 
