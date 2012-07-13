@@ -107,23 +107,6 @@
         return { top: _y, left: _x };
     }
 
-    function wacomIsEraser() {
-        if (wacomPlugin && wacomPlugin.penAPI) {
-            return parseInt(wacomPlugin.penAPI.pointerType) === 3;
-        }
-    }
-
-    function getOffset(el) {
-        var _x = 0;
-        var _y = 0;
-        while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
-            _x += el.offsetLeft;
-            _y += el.offsetTop;
-            el = el.offsetParent;
-        }
-        return { top: _y, left: _x };
-    }
-
     var Canvas = TeledrawCanvas.Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
         var c = document.createElement('canvas');
         if (w) c.width = w;
@@ -138,7 +121,6 @@
 
         if (typeof (new Canvas()).getContext != 'function') {
             throw new Error('Error: Your browser does not support HTML canvas!');
-            return false;
         }
 
         if (state.enableWacomSupport) {

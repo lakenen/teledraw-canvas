@@ -11,7 +11,7 @@
 
     // returns a CSS-style rgb(a) string for the given RGBA array
     Util.cssColor = function (rgba) {
-        if (rgba.length == 3) {
+        if (rgba.length === 3) {
             return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
         }
         return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + rgba[3] + ")";
@@ -152,6 +152,7 @@
             return color;
         }
 
+        var channels;
         var ok = false, r, g, b, a;
         color_string = getRGB(color_string);
 
