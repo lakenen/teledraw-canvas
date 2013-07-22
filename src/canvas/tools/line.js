@@ -2,7 +2,7 @@
  * Line tool
  */
 (function (TeledrawCanvas) {
-    var Line = TeledrawCanvas.Tool.createTool("line", "crosshair");
+    var Line = TeledrawCanvas.Tool.createTool('line', 'crosshair');
 
     Line.prototype.preview = function () {
         var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
@@ -12,7 +12,7 @@
         stroke.second = { x: canv.width, y: canv.height };
         stroke.draw();
         return canv;
-    }
+    };
 
     Line.stroke.prototype.lineCap = 'round';
 

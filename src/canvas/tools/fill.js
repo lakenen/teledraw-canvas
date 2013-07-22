@@ -2,7 +2,7 @@
  * Fill tool
  */
 (function (TeledrawCanvas) {
-    var Fill = TeledrawCanvas.Tool.createTool("fill", "crosshair");
+    var Fill = TeledrawCanvas.Tool.createTool('fill', 'crosshair');
     var abs = Math.abs;
 
     Fill.blur = true;

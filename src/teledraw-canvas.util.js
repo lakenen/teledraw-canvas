@@ -5,16 +5,17 @@
     var Util = function () { return Util; };
 
     Util.clear = function (ctx) {
-        var ctx = ctx.canvas ? ctx : /* (canvas) */ctx.getContext('2d');
+        // @TODO: enforce that this is a CanvasRenderingContext2D
+        ctx = ctx.canvas ? ctx : /* canvas */ctx.getContext('2d');
         ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
     };
 
     // returns a CSS-style rgb(a) string for the given RGBA array
     Util.cssColor = function (rgba) {
-        if (rgba.length == 3) {
-            return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
+        if (rgba.length === 3) {
+            return 'rgb(' + floor(rgba[0]) + ',' + floor(rgba[1]) + ',' + floor(rgba[2]) + ')';
         }
-        return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + rgba[3] + ")";
+        return 'rgba(' + floor(rgba[0]) + ',' + floor(rgba[1]) + ',' + floor(rgba[2]) + ',' + rgba[3] + ')';
     };
 
     // constrains c within a and b
@@ -70,7 +71,7 @@
             _max = max(r, g, b),
             _min = min(r, g, b),
             d, h, s, l = (_max + _min) / 2;
-        if (_max == _min) {
+        if (_max === _min) {
             h = s = 0;
         } else {
             d = _max - _min;
@@ -95,13 +96,14 @@
         var h = hsl[0],
             s = hsl[1]/100,
             l = hsl[2]/100;
-        if (s == 0)
+        if (s === 0) {
             r = g = b = (l * 255);
-        else {
-            if (l <= 0.5)
+        } else {
+            if (l <= 0.5) {
                 m2 = l * (s + 1);
-            else
+            } else {
                 m2 = l + s - l * s;
+            }
             m1 = l * 2 - m2;
             hue = h / 360;
             r = hue2rgb(m1, m2, hue + 1/3);
@@ -123,26 +125,26 @@
 
     function hue2rgb(m1, m2, hue) {
         var v;
-        if (hue < 0)
+        if (hue < 0) {
             hue += 1;
-        else if (hue > 1)
+        } else if (hue > 1) {
             hue -= 1;
+        }
 
-        if (6 * hue < 1)
+        if (6 * hue < 1) {
             v = m1 + (m2 - m1) * hue * 6;
-        else if (2 * hue < 1)
+        } else if (2 * hue < 1) {
             v = m2;
-        else if (3 * hue < 2)
+        } else if (3 * hue < 2) {
             v = m1 + (m2 - m1) * (2/3 - hue) * 6;
-        else
+        } else {
             v = m1;
-
+        }
         return 255 * v;
     }
 
     // parses any valid css color into an RGBA array
-    Util.parseColorString = function(color_string)
-    {
+    Util.parseColorString = function (colorString) {
         function getRGB(str) {
             var a = document.createElement('a');
             a.style.color = str;
@@ -153,18 +155,18 @@
         }
 
         var ok = false, r, g, b, a;
-        color_string = getRGB(color_string);
+        colorString = getRGB(colorString);
 
         // array of color definition objects
-        var color_defs = [
+        var colorDefs = [
         {
             re: /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/,
             //example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
             process: function (bits){
                 return [
-                parseInt(bits[1]),
-                parseInt(bits[2]),
-                parseInt(bits[3]),
+                parseInt(bits[1], 10),
+                parseInt(bits[2], 10),
+                parseInt(bits[3], 10),
                 1
                 ];
             }
@@ -174,19 +176,19 @@
             //example: ['rgba(123, 234, 45, 0.5)', 'rgba(255,234,245, .1)'],
             process: function (bits){
                 return [
-                parseInt(bits[1]),
-                parseInt(bits[2]),
-                parseInt(bits[3]),
+                parseInt(bits[1], 10),
+                parseInt(bits[2], 10),
+                parseInt(bits[3], 10),
                 parseFloat(bits[4])
                 ];
             }
         }];
 
         // search through the definitions to find a match
-        for (var i = 0; i < color_defs.length; i++) {
-            var re = color_defs[i].re;
-            var processor = color_defs[i].process;
-            var bits = re.exec(color_string);
+        for (var i = 0; i < colorDefs.length; i++) {
+            var re = colorDefs[i].re;
+            var processor = colorDefs[i].process;
+            var bits = re.exec(colorString);
             if (bits) {
                 channels = processor(bits);
                 r = channels[0];
@@ -204,7 +206,7 @@
         b = (b < 0 || isNaN(b)) ? 0 : ((b > 255) ? 255 : b);
         a = (a < 0 || isNaN(a)) ? 0 : ((a > 1) ? 1 : a);
         return ok ? [r, g, b, a] : [0, 0, 0, 1];
-    }
+    };
 
     TeledrawCanvas.util = Util;
 })(TeledrawCanvas);

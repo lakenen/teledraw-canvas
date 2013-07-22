@@ -41,8 +41,12 @@
     };
 
     History.prototype._move = function(from, to) {
-        if (!from.length) return false;
-        if (!this.current) return false;
+        if (!from.length) {
+            return false;
+        }
+        if (!this.current) {
+            return false;
+        }
         to.push(this.current);
         this.current = from.pop();
         this.current.restore();

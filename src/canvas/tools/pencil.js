@@ -2,7 +2,7 @@
  * Pencil tool
  */
 (function (TeledrawCanvas) {
-    var Pencil = TeledrawCanvas.Tool.createTool("pencil", "crosshair");
+    var Pencil = TeledrawCanvas.Tool.createTool('pencil', 'crosshair');
 
     Pencil.prototype.preview = function () {
         var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
@@ -11,7 +11,7 @@
         stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
         stroke.draw();
         return canv;
-    }
+    };
 
     Pencil.stroke.prototype.lineCap = 'round';
     Pencil.stroke.prototype.smoothing = true;
@@ -78,16 +78,18 @@
             currp = points[i];
 
             // ignore this point if they didn't actually move
-            if (currp.x === lastp.x && currp.y === lastp.y) continue;
+            if (currp.x === lastp.x && currp.y === lastp.y) {
+                continue;
+            }
 
             currv = new Vector(currp.x, currp.y);
             left = Vector.subtract(currv, lastv).unit().rotateZ(Math.PI/2);
             right = Vector.subtract(currv, lastv).unit().rotateZ(-Math.PI/2);
 
-            tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
+            tmp = new Vector(left).scale(lastp.p*thickness).add(lastv);
             path.left.push({ x: tmp.x, y: tmp.y });
 
-            tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
+            tmp = new Vector(right).scale(lastp.p*thickness).add(lastv);
             path.right.unshift({ x: tmp.x, y: tmp.y });
 
             lastp = currp;
@@ -96,10 +98,10 @@
 
 
         //add the last points
-        tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
+        tmp = new Vector(left).scale(lastp.p*thickness).add(lastv);
         path.left.push({ x: tmp.x, y: tmp.y });
 
-        tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
+        tmp = new Vector(right).scale(lastp.p*thickness).add(lastv);
         path.right.unshift({ x: tmp.x, y: tmp.y });
 
         // combine them into one full path
@@ -109,14 +111,16 @@
     }
 
     function drawLine(ctx, points, smoothing) {
-        if (points.length === 0) return;
+        if (points.length === 0) {
+            return;
+        }
         ctx.moveTo(points[0].x, points[0].y);
         var prev = points[0],
             prevprev = null, curr = prev, len = points.length;
         for (var i = 1, l = len; i < l; ++i) {
             curr = points[i];
 
-            if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
+            if (prevprev && (prevprev.x === curr.x || prevprev.y === curr.y)) {
                 // hack to avoid weird linejoins cutting the line
                 curr.x += 0.1;
                 curr.y += 0.1;

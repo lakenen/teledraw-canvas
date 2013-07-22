@@ -2,7 +2,7 @@
  * Eraser tool
  */
 (function (TeledrawCanvas) {
-    var Eraser = TeledrawCanvas.Tool.createTool("eraser", "crosshair");
+    var Eraser = TeledrawCanvas.Tool.createTool('eraser', 'crosshair');
 
     Eraser.prototype.preview = function () {
         var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
@@ -13,7 +13,7 @@
         stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
         stroke.draw();
         return canv;
-    }
+    };
 
 
     Eraser.stroke.prototype.lineWidth = 1;
@@ -22,7 +22,7 @@
     Eraser.stroke.prototype.draw = function () {
         this.color = [255, 255, 255, 255];
         this.ctx.globalCompositeOperation = 'destination-out';
-        TeledrawCanvas.tools["pencil"].stroke.prototype.draw.call(this);
+        TeledrawCanvas.tools['pencil'].stroke.prototype.draw.call(this);
     };
 })(TeledrawCanvas);
 

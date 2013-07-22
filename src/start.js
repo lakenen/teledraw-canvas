@@ -39,5 +39,5 @@ var abs = Math.abs,
 
 TeledrawCanvas = function (elt, opt) {
     return new TeledrawCanvas.api(elt, opt);
-}
+};
 

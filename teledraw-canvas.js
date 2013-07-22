@@ -1,50 +1,45 @@
 /*!
 
-	Teledraw Canvas
-	Version 0.11.2 (http://semver.org/)
-	Copyright 2012 Cameron Lakenen
-	
-	Permission is hereby granted, free of charge, to any person obtaining
-	a copy of this software and associated documentation files (the
-	"Software"), to deal in the Software without restriction, including
-	without limitation the rights to use, copy, modify, merge, publish,
-	distribute, sublicense, and/or sell copies of the Software, and to
-	permit persons to whom the Software is furnished to do so, subject to
-	the following conditions:
-	
-	The above copyright notice and this permission notice shall be
-	included in all copies or substantial portions of the Software.
-	
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-	LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-	OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-	WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    Teledraw Canvas
+    Version 0.12.0 (http://semver.org/)
+    Copyright 2012 Cameron Lakenen
+
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+    LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+    OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+    WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 **/
 
 (function () {
 
-var TRUE = true, 
-	FALSE = false, 
-	NULL = null, 
-	UNDEFINED,
-	math = Math,
-	abs = math.abs, 
-	sqrt = math.sqrt,
-	floor = math.floor, 
-	round = math.round,
-	min = math.min, 
-	max = math.max,
-	pow = math.pow,
-	pow2 = function (x) { return pow(x, 2); },
-	clamp;
+var abs = Math.abs,
+    sqrt = Math.sqrt,
+    floor = Math.floor,
+    round = Math.round,
+    min = Math.min,
+    max = Math.max,
+    pow = Math.pow,
+    pow2 = function (x) { return pow(x, 2); },
+    clamp;
 
 TeledrawCanvas = function (elt, opt) {
-	return new TeledrawCanvas.api(elt, opt);
-}
+    return new TeledrawCanvas.api(elt, opt);
+};
 
 /*
 
@@ -1688,7 +1683,7 @@ function contains(container, maybe) {
 
 	Vector.js
 	Copyright 2012 Cameron Lakenen
-	
+
 	Permission is hereby granted, free of charge, to any person obtaining
 	a copy of this software and associated documentation files (the
 	"Software"), to deal in the Software without restriction, including
@@ -1696,10 +1691,10 @@ function contains(container, maybe) {
 	distribute, sublicense, and/or sell copies of the Software, and to
 	permit persons to whom the Software is furnished to do so, subject to
 	the following conditions:
-	
+
 	The above copyright notice and this permission notice shall be
 	included in all copies or substantial portions of the Software.
-	
+
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -1712,7 +1707,9 @@ function contains(container, maybe) {
 
 function Vector(x, y, z) {
 	if (x instanceof Vector) {
-		return Vector.create(x);
+		z = x.z;
+        y = x.y;
+        x = x.x;
 	}
 	this.x = x || 0;
 	this.y = y || 0;
@@ -1769,15 +1766,16 @@ Vector.scale = function (v, s) {
 };
 Vector.cross = function (v1, v2) {
 	return new Vector(
-		v1.y * v2.z - v2.y * v1.z, 
-		v1.z * v2.x - v2.z * v1.x, 
+		v1.y * v2.z - v2.y * v1.z,
+		v1.z * v2.x - v2.z * v1.x,
 		v1.x * v2.y - v2.x * v1.y
 	);
 };
 Vector.average = function () {
 	var num, result = new Vector(), items = arguments;
-	if (arguments[0].constructor.toString().indexOf('Array') != -1)
+	if (arguments[0].constructor.toString().indexOf('Array') !== -1) {
 		items = arguments[0];
+    }
 	num = items.length;
 	for (i = 0; i < num;i++) {
 		result.add(Vector.create(items[i]));
@@ -1791,1002 +1789,1031 @@ Vector.create = function (o) {
  * TeledrawCanvas.util
  */
 (function (TeledrawCanvas) {
-	var Util = function () { return Util; };
-	
-	// returns a CSS-style rgb(a) string for the given RGBA array
-	Util.cssColor = function (rgba) {
-	    if (rgba.length == 3) {
-	        return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
-	    }
-	    return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + rgba[3] + ")";
-	};
-	
-	// constrains c within a and b
-	Util.clamp = clamp = function (c, a, b) {
-		return (c < a ? a : c > b ? b : c);
-	};
-	
-	// returns the opposite color. I think?
-	Util.opposite = function (color) {
-		if (!_.isArray(color)) {
-			color = Util.parseColorString(color);
-		}
-		var hsl = Util.rgb2hsl(color);
-		hsl[0] = (hsl[0] + 180) % 360;
-		hsl[1] = 100 - hsl[1];
-		hsl[2] = 100 - hsl[2];
-		var rgb = Util.hsl2rgb(hsl);
-		if (color.length === 4) {
-			rgb.push(color[3]);
-		}
-		return rgb;
-	};
-	
-	// kill the alpha channel!
-	Util.rgba2rgb = function(rgba) {
-		if (rgba.length === 3 || rgba[3] === 255) {
-			return rgba;
-		}
-		var r = rgba[0],
-			g = rgba[1],
-			b = rgba[2],
-			a = rgba[3],
-			out = [];
-		out[0] = (a * r) + (255 - a*255);
-		out[1] = (a * g) + (255 - a*255);
-		out[2] = (a * b) + (255 - a*255);
-		return out;
-	};
-	
-	Util.rgb2hex = function (rgb) {
-		rgb = Util.rgba2rgb(rgb);
-		return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
-	};
-	
-	Util.hex2rgb = function (hex) {
-		return Util.parseColorString(hex);
-	};
-	
-	Util.rgb2hsl = function (rgb) {
-		var r = rgb[0]/255,
-			g = rgb[1]/255,
-			b = rgb[2]/255,
-			_max = max(r, g, b),
-			_min = min(r, g, b),
-			d, h, s, l = (_max + _min) / 2;
-		if (_max == _min) {
-			h = s = 0;
-		} else {
-			d = _max - _min;
-			s = l > 0.5 ? d / (2 - _max - _min) : d / (_max + _min);
-			switch (max) {
-				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-				case g: h = (b - r) / d + 2; break;
-				case b: h = (r - g) / d + 4; break;
-			}
-			h /= 6;
-		}
-		return [h, s*100, l*100];
-	};
-	
-	Util.hex2hsl = function (hex) {
-		return Util.rgb2hsl(Util.hex2rgb(hex));
-	};
-	
-	Util.hsl2rgb = function (hsl) {
-		var m1, m2, hue;
-		var r, g, b;
-		var h = hsl[0],
-			s = hsl[1]/100,
-			l = hsl[2]/100;
-		if (s == 0)
-			r = g = b = (l * 255);
-		else {
-			if (l <= 0.5)
-				m2 = l * (s + 1);
-			else
-				m2 = l + s - l * s;
-			m1 = l * 2 - m2;
-			hue = h / 360;
-			r = hue2rgb(m1, m2, hue + 1/3);
-			g = hue2rgb(m1, m2, hue);
-			b = hue2rgb(m1, m2, hue - 1/3);
-		}
-		return [r, g, b];
-	};
-	
-	function toHex(n) {
-		n = parseInt(n, 10) || 0;
-		n = clamp(n, 0, 255).toString(16);
-		if (n.length === 1) {
-			n = '0'+n;
-		}
-		return n;
-	}
-	
-	
-	function hue2rgb(m1, m2, hue) {
-		var v;
-		if (hue < 0)
-			hue += 1;
-		else if (hue > 1)
-			hue -= 1;
-	
-		if (6 * hue < 1)
-			v = m1 + (m2 - m1) * hue * 6;
-		else if (2 * hue < 1)
-			v = m2;
-		else if (3 * hue < 2)
-			v = m1 + (m2 - m1) * (2/3 - hue) * 6;
-		else
-			v = m1;
-	
-		return 255 * v;
-	}
-	
-	// parses any valid css color into an RGBA array
-	Util.parseColorString = function(color_string)
-	{
-		function getRGB(str) { 
-			var a = document.createElement('a');
-			a.style.color = str;
-			document.body.appendChild(a);
-			var color = getComputedStyle(a).color;
-			document.body.removeChild(a);
-			return color;
-		}
-		
-	 	var ok = false, r, g, b, a;
-	 	color_string = getRGB(color_string);
-	 	
-		// array of color definition objects
-		var color_defs = [
-		{
-			re: /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/,
-			//example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
-			process: function (bits){
-				return [
-				parseInt(bits[1]),
-				parseInt(bits[2]),
-				parseInt(bits[3]),
-				1
-				];
-			}
-		},
-		{
-			re: /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d*(\.\d+)?)\)$/,
-			//example: ['rgba(123, 234, 45, 0.5)', 'rgba(255,234,245, .1)'],
-			process: function (bits){
-				return [
-				parseInt(bits[1]),
-				parseInt(bits[2]),
-				parseInt(bits[3]),
-				parseFloat(bits[4])
-				];
-			}
-		}];
-	 
-		// search through the definitions to find a match
-		for (var i = 0; i < color_defs.length; i++) {
-			var re = color_defs[i].re;
-			var processor = color_defs[i].process;
-			var bits = re.exec(color_string);
-			if (bits) {
-				channels = processor(bits);
-				r = channels[0];
-				g = channels[1];
-				b = channels[2];
-				a = channels[3];
-				ok = true;
-			}
-	 
-		}
-	 
-		// validate/cleanup values
-		r = (r < 0 || isNaN(r)) ? 0 : ((r > 255) ? 255 : r);
-		g = (g < 0 || isNaN(g)) ? 0 : ((g > 255) ? 255 : g);
-		b = (b < 0 || isNaN(b)) ? 0 : ((b > 255) ? 255 : b);
-		a = (a < 0 || isNaN(a)) ? 0 : ((a > 1) ? 1 : a);
-		return ok ? [r, g, b, a] : [0, 0, 0, 1];
-	}
-	
-	TeledrawCanvas.util = Util;
+    var Util = function () { return Util; };
+
+    Util.clear = function (ctx) {
+        // @TODO: enforce that this is a CanvasRenderingContext2D
+        ctx = ctx.canvas ? ctx : /* canvas */ctx.getContext('2d');
+        ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    };
+
+    // returns a CSS-style rgb(a) string for the given RGBA array
+    Util.cssColor = function (rgba) {
+        if (rgba.length === 3) {
+            return 'rgb(' + floor(rgba[0]) + ',' + floor(rgba[1]) + ',' + floor(rgba[2]) + ')';
+        }
+        return 'rgba(' + floor(rgba[0]) + ',' + floor(rgba[1]) + ',' + floor(rgba[2]) + ',' + rgba[3] + ')';
+    };
+
+    // constrains c within a and b
+    Util.clamp = clamp = function (c, a, b) {
+        return (c < a ? a : c > b ? b : c);
+    };
+
+    // returns the opposite color. I think?
+    Util.opposite = function (color) {
+        if (!_.isArray(color)) {
+            color = Util.parseColorString(color);
+        }
+        var hsl = Util.rgb2hsl(color);
+        hsl[0] = (hsl[0] + 180) % 360;
+        hsl[1] = 100 - hsl[1];
+        hsl[2] = 100 - hsl[2];
+        var rgb = Util.hsl2rgb(hsl);
+        if (color.length === 4) {
+            rgb.push(color[3]);
+        }
+        return rgb;
+    };
+
+    // kill the alpha channel!
+    Util.rgba2rgb = function(rgba) {
+        if (rgba.length === 3 || rgba[3] === 255) {
+            return rgba;
+        }
+        var r = rgba[0],
+            g = rgba[1],
+            b = rgba[2],
+            a = rgba[3],
+            out = [];
+        out[0] = (a * r) + (255 - a*255);
+        out[1] = (a * g) + (255 - a*255);
+        out[2] = (a * b) + (255 - a*255);
+        return out;
+    };
+
+    Util.rgb2hex = function (rgb) {
+        rgb = Util.rgba2rgb(rgb);
+        return '#' + toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
+    };
+
+    Util.hex2rgb = function (hex) {
+        return Util.parseColorString(hex);
+    };
+
+    Util.rgb2hsl = function (rgb) {
+        var r = rgb[0]/255,
+            g = rgb[1]/255,
+            b = rgb[2]/255,
+            _max = max(r, g, b),
+            _min = min(r, g, b),
+            d, h, s, l = (_max + _min) / 2;
+        if (_max === _min) {
+            h = s = 0;
+        } else {
+            d = _max - _min;
+            s = l > 0.5 ? d / (2 - _max - _min) : d / (_max + _min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return [h, s*100, l*100];
+    };
+
+    Util.hex2hsl = function (hex) {
+        return Util.rgb2hsl(Util.hex2rgb(hex));
+    };
+
+    Util.hsl2rgb = function (hsl) {
+        var m1, m2, hue;
+        var r, g, b;
+        var h = hsl[0],
+            s = hsl[1]/100,
+            l = hsl[2]/100;
+        if (s === 0) {
+            r = g = b = (l * 255);
+        } else {
+            if (l <= 0.5) {
+                m2 = l * (s + 1);
+            } else {
+                m2 = l + s - l * s;
+            }
+            m1 = l * 2 - m2;
+            hue = h / 360;
+            r = hue2rgb(m1, m2, hue + 1/3);
+            g = hue2rgb(m1, m2, hue);
+            b = hue2rgb(m1, m2, hue - 1/3);
+        }
+        return [r, g, b];
+    };
+
+    function toHex(n) {
+        n = parseInt(n, 10) || 0;
+        n = clamp(n, 0, 255).toString(16);
+        if (n.length === 1) {
+            n = '0'+n;
+        }
+        return n;
+    }
+
+
+    function hue2rgb(m1, m2, hue) {
+        var v;
+        if (hue < 0) {
+            hue += 1;
+        } else if (hue > 1) {
+            hue -= 1;
+        }
+
+        if (6 * hue < 1) {
+            v = m1 + (m2 - m1) * hue * 6;
+        } else if (2 * hue < 1) {
+            v = m2;
+        } else if (3 * hue < 2) {
+            v = m1 + (m2 - m1) * (2/3 - hue) * 6;
+        } else {
+            v = m1;
+        }
+        return 255 * v;
+    }
+
+    // parses any valid css color into an RGBA array
+    Util.parseColorString = function (colorString) {
+        function getRGB(str) {
+            var a = document.createElement('a');
+            a.style.color = str;
+            document.body.appendChild(a);
+            var color = getComputedStyle(a).color;
+            document.body.removeChild(a);
+            return color;
+        }
+
+        var ok = false, r, g, b, a;
+        colorString = getRGB(colorString);
+
+        // array of color definition objects
+        var colorDefs = [
+        {
+            re: /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/,
+            //example: ['rgb(123, 234, 45)', 'rgb(255,234,245)'],
+            process: function (bits){
+                return [
+                parseInt(bits[1], 10),
+                parseInt(bits[2], 10),
+                parseInt(bits[3], 10),
+                1
+                ];
+            }
+        },
+        {
+            re: /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d*(\.\d+)?)\)$/,
+            //example: ['rgba(123, 234, 45, 0.5)', 'rgba(255,234,245, .1)'],
+            process: function (bits){
+                return [
+                parseInt(bits[1], 10),
+                parseInt(bits[2], 10),
+                parseInt(bits[3], 10),
+                parseFloat(bits[4])
+                ];
+            }
+        }];
+
+        // search through the definitions to find a match
+        for (var i = 0; i < colorDefs.length; i++) {
+            var re = colorDefs[i].re;
+            var processor = colorDefs[i].process;
+            var bits = re.exec(colorString);
+            if (bits) {
+                channels = processor(bits);
+                r = channels[0];
+                g = channels[1];
+                b = channels[2];
+                a = channels[3];
+                ok = true;
+            }
+
+        }
+
+        // validate/cleanup values
+        r = (r < 0 || isNaN(r)) ? 0 : ((r > 255) ? 255 : r);
+        g = (g < 0 || isNaN(g)) ? 0 : ((g > 255) ? 255 : g);
+        b = (b < 0 || isNaN(b)) ? 0 : ((b > 255) ? 255 : b);
+        a = (a < 0 || isNaN(a)) ? 0 : ((a > 1) ? 1 : a);
+        return ok ? [r, g, b, a] : [0, 0, 0, 1];
+    };
+
+    TeledrawCanvas.util = Util;
 })(TeledrawCanvas);
 
 
 // requestAnimationFrame polyfill by Erik Möller
 // fixes from Paul Irish and Tino Zijdel
 (function() {
-	var lastTime = 0;
-	var vendors = ['ms', 'moz', 'webkit', 'o'];
-	for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
-		window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
-		window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] 
-								   || window[vendors[x]+'CancelRequestAnimationFrame'];
-	}
- 
-	if (!window.requestAnimationFrame) {
-		window.requestAnimationFrame = function(callback, element) {
-			var currTime = new Date().getTime();
-			var timeToCall = Math.max(0, 16 - (currTime - lastTime));
-			var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
-			  timeToCall);
-			lastTime = currTime + timeToCall;
-			return id;
-		};
-	}
-	if (!window.cancelAnimationFrame) {
-		window.cancelAnimationFrame = function(id) {
-			clearTimeout(id);
-		};
-	}
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+        window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame']
+                                   || window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+
+    if (!window.requestAnimationFrame) {
+        window.requestAnimationFrame = function(callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+              timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+    }
+    if (!window.cancelAnimationFrame) {
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+    }
 }());
+
 (function (TeledrawCanvas) {
-	TeledrawCanvas.canvases = [];
-	var _id = 0;
-	
-	// global default tool settings
-	var defaults = {
-		tool: 'pencil',
-		alpha: 255,
-		color: [0, 0, 0],
-		strokeSize: 1000,
-		strokeSoftness: 0
-	};
-	
-	// global default state
-	var defaultState = {
-		last: NULL,
-		currentTool: NULL,
-		previousTool: NULL,
-		tool: NULL,
-		mouseDown: FALSE,
-		mouseOver: FALSE,
-		width: NULL,
-		height: NULL,
-		
-		currentZoom: 1,
-		currentOffset: { x: 0, y: 0 },
-		
-		// if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
-		// related note: safari has trouble with high values for shadowOffset
-		shadowOffset: 5000,
-		
-		enableZoom: TRUE,
-		enableKeyboardShortcuts: TRUE,
-		enableWacomSupport: TRUE,
-		
-		// default limits
-		maxHistory: 10,
-		minStrokeSize: 500,
-		maxStrokeSize: 10000,
-		minStrokeSoftness: 0,
-		maxStrokeSoftness: 100,
-		maxZoom: 8 // (8 == 800%)
-	};
-	
-	var wacomPlugin;
-    
+    TeledrawCanvas.canvases = [];
+    var _id = 0;
+
+    // global default tool settings
+    var toolDefaults = {
+        tool: 'pencil',
+        alpha: 255,
+        color: [0, 0, 0],
+        strokeSize: 1000,
+        strokeSoftness: 0
+    };
+
+    // global default state
+    var defaultState = {
+        last: null ,
+        currentTool: null ,
+        previousTool: null ,
+        tool: null ,
+        mouseDown: false,
+        mouseOver: false,
+        width: null ,
+        height: null ,
+
+        currentZoom: 1,
+        currentOffset: { x: 0, y: 0 },
+
+        // if you are using strokeSoftness, make sure shadowOffset >= max(canvas.width, canvas.height)
+        // related note: safari has trouble with high values for shadowOffset
+        shadowOffset: 5000,
+
+        enableZoom: true,
+        enableKeyboardShortcuts: true,
+        enableWacomSupport: true,
+
+        // default limits
+        maxHistory: 10,
+        minStrokeSize: 500,
+        maxStrokeSize: 10000,
+        minStrokeSoftness: 0,
+        maxStrokeSoftness: 100,
+        maxZoom: 8 // (8 == 800%)
+    };
+
+    var wacomPlugin;
+
     function wacomEmbedObject() {
-    	if (!wacomPlugin) {
-    		var plugin;
-    		if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
-    			plugin = document.createElement('embed');
-    			plugin.name = plugin.id = 'wacom-plugin';
-    			plugin.type = 'application/x-wacomtabletplugin';
-    		} else {
-    			plugin = document.createElement('object');
-    			plugin.classid = 'CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308';
-				plugin.codebase = "fbWacomTabletPlugin.cab";
-    		}
-    		
-			plugin.style.width = plugin.style.height = '1px';
-			plugin.style.top = plugin.style.left = '-10000px';
-			plugin.style.position = 'absolute';
-    		document.body.appendChild(plugin);
-    		wacomPlugin = plugin;
-    	}
-    }
-    
-    /*var lastPressure = null,
-    	lastPressureTime = now();
-    function wacomGetPressure() {
-    	if (wacomPlugin && wacomPlugin.penAPI) {
-    		var pressure;
-    		// only get pressure once every other poll;
-    		if (now() - lastPressureTime > 20) {
-    			pressure = wacomPlugin.penAPI.pressure;
-    			lastPressure = pressure;
-    			lastPressureTime = now();
-    		} else {
-    			pressure = lastPressure;
-    		}
-    		return pressure;
-    	}
-    }*/
-    
-    function wacomGetPressure() {
-    	if (wacomPlugin && wacomPlugin.penAPI) {
-    		var p = wacomPlugin.penAPI.pressure;
-    		return p;
-    	}
-    }
-	
-	function wacomIsEraser() {
-    	if (wacomPlugin && wacomPlugin.penAPI) {
-    		return parseInt(wacomPlugin.penAPI.pointerType) === 3;
-    	}
-	}
-	
-	function getOffset(el) {
-		var _x = 0;
-		var _y = 0;
-		while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
-			_x += el.offsetLeft;
-			_y += el.offsetTop;
-			el = el.offsetParent;
-		}
-		return { top: _y, left: _x };
-	}
-	
-	var Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
-		var c = document.createElement('canvas');
-		if (w) c.width = w;
-		if (h) c.height = h;
-		return c;
-	};
-	
-	var API = function (elt, options) {
-		var self = this,
-			element = self.element = elt.getContext ? elt : document.getElementById(elt);
-			state = self.state = _.extend({}, defaultState, options);
-		
-		if (typeof (new Canvas()).getContext != 'function') {
-			throw new Error('Error: Your browser does not support HTML canvas!');
-			return false;
-		}
-		
-		if (state.enableWacomSupport) {
-			wacomEmbedObject();
-		}
-		
-		element.width = state.width = state.displayWidth || state.width || element.width;
-		element.height = state.height = state.displayHeight || state.height || element.height;
-		state.fullWidth = state.fullWidth || state.width;
-		state.fullHeight = state.fullHeight || state.height;
-		
-		if (state.width / state.height !== state.fullWidth / state.fullHeight) {
-			//Display and full canvas aspect ratios differ!
-			//Adjusting full size to match display aspect ratio...
-			state.fullHeight = state.fullWidth * state.height / state.width;
-		}
-		
-		self._displayCanvas = element;
-		if (state.enableZoom) {
-			self._canvas = new Canvas(state.fullWidth, state.fullHeight);
-		} else {
-			self._canvas = element;
-		}
-		self.history = new TeledrawCanvas.History(self);
-		
-		self.defaults();
-		self.zoom(0);
-		self.history.checkpoint();
-		TeledrawCanvas.canvases[_id++] = self;
-		self.bindEvents();
-	};
-	
-	var APIprototype = API.prototype;
-	
-	APIprototype.bindEvents = function () {
-		var self = this,
-			element = self.element,
-			state = self.state,
-			gInitZoom,
-			lastMoveEvent = NULL,
-			lastmove = 0,
-			lastpressure = 0;
-			
-		addEvent(element, 'gesturestart', gestureStart);
-		addEvent(element, 'gesturechange', gestureChange);
-		addEvent(element, 'gestureend', gestureEnd);
-		addEvent(element, 'dblclick', dblClick);
-		addEvent(element, 'mouseenter', mouseEnter); 
-		addEvent(element, 'mousedown', mouseDown);    
-		addEvent(element, 'touchstart', mouseDown);
-		addEvent(element, 'mouseleave', mouseLeave);
-	    addEvent(window, 'mousemove', mouseMove);        
-	    addEvent(window, 'touchmove', mouseMove);
-	    addEvent(window, 'keydown', keyDown);
-	    addEvent(window, 'keyup', keyUp);
-	   
-		self.unbindEvents = function () {
-			removeEvent(element, 'gesturestart', gestureStart);
-			removeEvent(element, 'gesturechange', gestureChange);
-			removeEvent(element, 'gestureend', gestureEnd);
-			removeEvent(element, 'dblclick', dblClick);
-			removeEvent(element, 'mouseenter', mouseEnter); 
-			removeEvent(element, 'mousedown', mouseDown);    
-			removeEvent(element, 'touchstart', mouseDown);
-			removeEvent(element, 'mouseleave', mouseLeave);
-			removeEvent(window, 'mousemove', mouseMove);        
-			removeEvent(window, 'touchmove', mouseMove);
-			removeEvent(window, 'keydown', keyDown);
-			removeEvent(window, 'keyup', keyUp);
-		};
-		
-		function mouseEnter(evt) {
-			var pt = getCoord(evt);
-			state.tool.enter(state.mouseDown, pt);
-			state.last = pt;
-			state.mouseOver = TRUE;
-		}
-		
-		function mouseLeave(evt) {
-			var pt = getCoord(evt);
-			state.tool.leave(state.mouseDown, pt);
-			state.mouseOver = FALSE;
-		}
-		
-		function dblClick(evt) {
-			var pt = getCoord(evt);
-			state.tool.dblclick(pt);
-		}
-		
-		function keyUp(e) {
-    		state.tool.keyup(state.mouseDown, e.keyCode);
-	    }
-		
-		function keyDown(e) {
-    		state.tool.keydown(state.mouseDown, e.keyCode);
-    		if (!state.enableKeyboardShortcuts) {
-    			return;
-    		}
-	    	var eltName = document.activeElement.nodeName.toLowerCase();
-	    	if (eltName === 'input' || eltName === 'textarea') {
-	    		return;
-	    	} else {
-		    	switch (e.keyCode) {
-		    		case 69: // e
-		    			self.setTool('eraser');
-		    			break;
-		    		case 70: // f
-		    			self.setTool('fill');
-		    			break;
-		    		case 71: // g
-		    			self.setTool('grab');
-		    			break;
-		    		case 73: // i
-		    			self.setTool('eyedropper');
-		    			break;
-		    		case 76: // l
-		    			self.setTool('line');
-		    			break;
-		    		case 79: // o
-		    			self.setTool('ellipse');
-		    			//Canvas.getTool().setFill(e.shiftKey === true);
-		    			break;
-		    		case 80: // p
-		    			self.setTool('pencil');
-		    			break;
-		    		case 82: // r
-		    			self.setTool('rectangle');
-		    			//Canvas.getTool().setFill(e.shiftKey === true);
-		    			break;
-		    		case 90: // z
-		    			if (state.mouseDown) {
-		    				return false;
-		    			}
-		    			if (e.metaKey || e.ctrlKey) {
-	    	    			if (e.shiftKey) {
-	    	    				self.redo();
-	    	    			} else {
-	    	    				self.undo();
-	    	    			}
-	    	    			return false;
-		    	    	}
-		    			break;
-		    		case 189: // -
-		    			if (e.shiftKey) { // _
-    	    				// decrease brush size
-		    				self.setStrokeSize(state.strokeSize - 500);
-    	    			}
-		    			break;
-		    		case 187: // =
-		    			if (e.shiftKey) { // +
-    	    				// increase brush size
-		    				self.setStrokeSize(state.strokeSize + 500);
-    	    			}
-		    			break;
-		    		case 188: // ,
-		    			if (e.shiftKey) { // <
-    	    				// decrease alpha
-		    				self.setAlpha(state.globalAlpha - 0.1);
-    	    			}
-		    			break;
-		    		case 190: // .
-		    			if (e.shiftKey) { // >
-    	    				// increase alpha
-		    				self.setAlpha(state.globalAlpha + 0.1);
-    	    			}
-		    			break;
-		    		case 219: // [
-		    			if (e.shiftKey) { // {
-    	    				// decrease brush softness
-		    				self.setStrokeSoftness(state.strokeSoftness - 10);
-    	    			}
-		    			break;
-		    		case 221: // ]
-		    			if (e.shiftKey) { // }
-    	    				// increase brush softness
-		    				self.setStrokeSoftness(state.strokeSoftness + 10);
-    	    			}
-		    			break;
-		    	}
-	    	}
-		}
-		
-	    function mouseMove(e) {
-	    	if (Date.now() - lastmove < 25) {
-	    		return FALSE;
-	    	}
-	    	lastmove = Date.now();
-	    
-	    	if (e.type == 'touchmove' && e.touches.length > 1) {
-	    		return TRUE;
-	    	}
-	    	if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
-	        if (e.target == element || state.mouseDown) {
-	        	var pt = getCoord(e);
-				state.tool.move(state.mouseDown, state.last, pt);
-				state.last = pt;
-				self.trigger('mousemove', pt, e);
-	            lastMoveEvent = e.type;
-            	e.preventDefault();
-        		return FALSE;
-	        }
-	    }
+        if (!wacomPlugin) {
+            var plugin;
+            if (navigator.mimeTypes["application/x-wacomtabletplugin"]) {
+                plugin = document.createElement('embed');
+                plugin.name = plugin.id = 'wacom-plugin';
+                plugin.type = 'application/x-wacomtabletplugin';
+            } else {
+                plugin = document.createElement('object');
+                plugin.classid = 'CLSID:092dfa86-5807-5a94-bf3b-5a53ba9e5308';
+                plugin.codebase = "fbWacomTabletPlugin.cab";
+            }
 
-	    function mouseDown(e) {
-            var pt = state.last = getCoord(e);
-	    	if (e.type == 'touchstart' && e.touches.length > 1) {
-	    		return TRUE;
-	    	}
-            addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
-            
-			state.mouseDown = TRUE;
-			if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
-				self.setTool('eraser');
-				state.wacomWasEraser = TRUE;
-			}
-			state.tool.down(pt);
-			self.trigger('mousedown', pt, e);
-			
-        	document.onselectstart = function() { return FALSE; };
-        	e.preventDefault();
-        	return FALSE;
+            plugin.style.width = plugin.style.height = '1px';
+            plugin.style.top = plugin.style.left = '-10000px';
+            plugin.style.position = 'absolute';
+            document.body.appendChild(plugin);
+            wacomPlugin = plugin;
         }
-	    
-	    function mouseUp(e) {
+    }
+
+    /*var lastPressure = null,
+        lastPressureTime = now();
+    function wacomGetPressure() {
+        if (wacomPlugin && wacomPlugin.penAPI) {
+            var pressure;
+            // only get pressure once every other poll;
+            if (now() - lastPressureTime > 20) {
+                pressure = wacomPlugin.penAPI.pressure;
+                lastPressure = pressure;
+                lastPressureTime = now();
+            } else {
+                pressure = lastPressure;
+            }
+            return pressure;
+        }
+    }*/
+
+    function wacomGetPressure() {
+        if (wacomPlugin && wacomPlugin.penAPI) {
+            var p = wacomPlugin.penAPI.pressure;
+            return p;
+        }
+    }
+
+    function wacomIsEraser() {
+        if (wacomPlugin && wacomPlugin.penAPI) {
+            return parseInt(wacomPlugin.penAPI.pointerType, 10) === 3;
+        }
+    }
+
+    function getOffset(el) {
+        var _x = 0;
+        var _y = 0;
+        // @TODO: replace isNaN with something safer
+        while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
+            _x += el.offsetLeft;
+            _y += el.offsetTop;
+            el = el.offsetParent;
+        }
+        return { top: _y, left: _x };
+    }
+
+    var Canvas = TeledrawCanvas.Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (width, height) {
+        var canvas = document.createElement('canvas');
+        if (width) {
+            canvas.width = width;
+        }
+        if (height) {
+            canvas.height = height;
+        }
+        return canvas;
+    };
+
+    var API = function (elt, options) {
+        var self = this,
+            element = self.element = elt.getContext ? elt : document.getElementById(elt);
+            state = self.state = _.extend({}, defaultState, options);
+
+        if (typeof (new Canvas()).getContext !== 'function') {
+            throw new Error('Error: Your browser does not support HTML canvas!');
+        }
+
+        if (state.enableWacomSupport) {
+            wacomEmbedObject();
+        }
+
+        element.width = state.width = state.displayWidth || state.width || element.width;
+        element.height = state.height = state.displayHeight || state.height || element.height;
+        state.fullWidth = state.fullWidth || state.width;
+        state.fullHeight = state.fullHeight || state.height;
+
+        if (state.width / state.height !== state.fullWidth / state.fullHeight) {
+            //Display and full canvas aspect ratios differ!
+            //Adjusting full size to match display aspect ratio...
+            state.fullHeight = state.fullWidth * state.height / state.width;
+        }
+
+        self._displayCanvas = element;
+        if (state.enableZoom) {
+            self._canvas = new Canvas(state.fullWidth, state.fullHeight);
+        } else {
+            self._canvas = element;
+        }
+        self.history = new TeledrawCanvas.History(self);
+
+        self.defaults();
+        self.zoom(0);
+        self.history.checkpoint();
+        TeledrawCanvas.canvases[_id++] = self;
+        self.bindEvents();
+    };
+
+    var APIprototype = API.prototype;
+
+    APIprototype.bindEvents = function () {
+        var self = this,
+            element = self.element,
+            state = self.state,
+            gInitZoom,
+            lastMoveEvent = null ,
+            lastmove = 0,
+            lastpressure = 0;
+
+        addEvent(element, 'gesturestart', gestureStart);
+        addEvent(element, 'gesturechange', gestureChange);
+        addEvent(element, 'gestureend', gestureEnd);
+        addEvent(element, 'dblclick', dblClick);
+        addEvent(element, 'mouseenter', mouseEnter);
+        addEvent(element, 'mousedown', mouseDown);
+        addEvent(element, 'touchstart', mouseDown);
+        addEvent(element, 'mouseleave', mouseLeave);
+        addEvent(window, 'mousemove', mouseMove);
+        addEvent(window, 'touchmove', mouseMove);
+        addEvent(window, 'keydown', keyDown);
+        addEvent(window, 'keyup', keyUp);
+
+        self.unbindEvents = function () {
+            removeEvent(element, 'gesturestart', gestureStart);
+            removeEvent(element, 'gesturechange', gestureChange);
+            removeEvent(element, 'gestureend', gestureEnd);
+            removeEvent(element, 'dblclick', dblClick);
+            removeEvent(element, 'mouseenter', mouseEnter);
+            removeEvent(element, 'mousedown', mouseDown);
+            removeEvent(element, 'touchstart', mouseDown);
+            removeEvent(element, 'mouseleave', mouseLeave);
+            removeEvent(window, 'mousemove', mouseMove);
+            removeEvent(window, 'touchmove', mouseMove);
+            removeEvent(window, 'keydown', keyDown);
+            removeEvent(window, 'keyup', keyUp);
+        };
+
+        function mouseEnter(evt) {
+            var pt = getCoord(evt);
+            state.tool.enter(state.mouseDown, pt);
+            state.last = pt;
+            state.mouseOver = true;
+        }
+
+        function mouseLeave(evt) {
+            var pt = getCoord(evt);
+            state.tool.leave(state.mouseDown, pt);
+            state.mouseOver = false;
+        }
+
+        function dblClick(evt) {
+            var pt = getCoord(evt);
+            state.tool.dblclick(pt);
+        }
+
+        function keyUp(e) {
+            state.tool.keyup(state.mouseDown, e.keyCode);
+        }
+
+        function keyDown(e) {
+            state.tool.keydown(state.mouseDown, e.keyCode);
+            if (!state.enableKeyboardShortcuts) {
+                return;
+            }
+            var eltName = document.activeElement.nodeName.toLowerCase();
+            if (eltName === 'input' || eltName === 'textarea') {
+                return;
+            } else {
+                switch (e.keyCode) {
+                    case 69: // e
+                        self.setTool('eraser');
+                        break;
+                    case 70: // f
+                        self.setTool('fill');
+                        break;
+                    case 71: // g
+                        self.setTool('grab');
+                        break;
+                    case 73: // i
+                        self.setTool('eyedropper');
+                        break;
+                    case 76: // l
+                        self.setTool('line');
+                        break;
+                    case 79: // o
+                        self.setTool('ellipse');
+                        //Canvas.getTool().setFill(e.shiftKey === true);
+                        break;
+                    case 80: // p
+                        self.setTool('pencil');
+                        break;
+                    case 82: // r
+                        self.setTool('rectangle');
+                        //Canvas.getTool().setFill(e.shiftKey === true);
+                        break;
+                    case 90: // z
+                        if (state.mouseDown) {
+                            return false;
+                        }
+                        if (e.metaKey || e.ctrlKey) {
+                            if (e.shiftKey) {
+                                self.redo();
+                            } else {
+                                self.undo();
+                            }
+                            return false;
+                        }
+                        break;
+                    case 189: // -
+                        if (e.shiftKey) { // _
+                            // decrease brush size
+                            self.setStrokeSize(state.strokeSize - 500);
+                        }
+                        break;
+                    case 187: // =
+                        if (e.shiftKey) { // +
+                            // increase brush size
+                            self.setStrokeSize(state.strokeSize + 500);
+                        }
+                        break;
+                    case 188: // ,
+                        if (e.shiftKey) { // <
+                            // decrease alpha
+                            self.setAlpha(state.globalAlpha - 0.1);
+                        }
+                        break;
+                    case 190: // .
+                        if (e.shiftKey) { // >
+                            // increase alpha
+                            self.setAlpha(state.globalAlpha + 0.1);
+                        }
+                        break;
+                    case 219: // [
+                        if (e.shiftKey) { // {
+                            // decrease brush softness
+                            self.setStrokeSoftness(state.strokeSoftness - 10);
+                        }
+                        break;
+                    case 221: // ]
+                        if (e.shiftKey) { // }
+                            // increase brush softness
+                            self.setStrokeSoftness(state.strokeSoftness + 10);
+                        }
+                        break;
+                }
+            }
+        }
+
+        function mouseMove(e) {
+            if (Date.now() - lastmove < 25) {
+                return false;
+            }
+            lastmove = Date.now();
+
+            if (e.type === 'touchmove' && e.touches.length > 1) {
+                return true;
+            }
+            if (lastMoveEvent === 'touchmove' && e.type === 'mousemove') {
+                return;
+            }
+            if (e.target === element || state.mouseDown) {
+                var pt = getCoord(e);
+                state.tool.move(state.mouseDown, state.last, pt);
+                state.last = pt;
+                self.trigger('mousemove', pt, e);
+                lastMoveEvent = e.type;
+                e.preventDefault();
+                return false;
+            }
+        }
+
+        function mouseDown(e) {
+            var pt = state.last = getCoord(e);
+            if (e.type === 'touchstart' && e.touches.length > 1) {
+                return true;
+            }
+            addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
+
+            state.mouseDown = true;
+            if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
+                self.setTool('eraser');
+                state.wacomWasEraser = true;
+            }
+            state.tool.down(pt);
+            self.trigger('mousedown', pt, e);
+
+            document.onselectstart = function() { return false; };
+            e.preventDefault();
+            return false;
+        }
+
+        function mouseUp(e) {
             removeEvent(window, e.type === 'mouseup' ? 'mouseup' : 'touchend', mouseUp);
-            
-	    	if (e.type == 'touchend' && e.touches.length > 1) {
-	    		return TRUE;
-	    	}
-	    	
-			state.mouseDown = FALSE;
-			state.tool.up(state.last);
-			self.trigger('mouseup', state.last, e);
-        	
-			if (state.wacomWasEraser === TRUE) {
-				self.previousTool();
-				state.wacomWasEraser = FALSE;
-			}
-        
-        	document.onselectstart = function() { return TRUE; };
-        	e.preventDefault();
-        	return FALSE;
-	    }
-	    
-	    function gestureStart(evt) {
-			if (state.tool.name == 'grab') {
-				gInitZoom = state.currentZoom;
-			}
-		}
-		
-		function gestureChange(evt) {
-			if (state.tool.name == 'grab') {
-				var pt = state.last;
-				self.zoom(gInitZoom*evt.scale, pt.xd, pt.yd);
-			}
-			evt.preventDefault();
-        	return FALSE;
-		}
-		
-		function gestureEnd(evt) {
-		
-		}
-		
-		function getCoord(e) {
-	        var off = getOffset(element),
-	        	pageX = e.pageX || e.touches && e.touches[0].pageX,
-				pageY = e.pageY || e.touches && e.touches[0].pageY,
-				pressure = null;
-			if (state.enableWacomSupport) {
-				if (Date.now() - lastpressure > 25) {
-					lastpressure = Date.now();
-					pressure = wacomGetPressure();
-				}
-			}
 
-	        return {
-	        	x: floor((pageX - off.left)/state.currentZoom) + state.currentOffset.x || 0,
-	        	y: floor((pageY - off.top)/state.currentZoom) + state.currentOffset.y || 0,
-	        	xd: floor(pageX - off.left) || 0,
-	        	yd: floor(pageY - off.top) || 0,
-	        	p: pressure
-	        };
-		}
-	};
-	
-	APIprototype.setRGBAArrayColor = function (rgba) {
-		var state = this.state;
-		if (rgba.length === 4) {
-			state.globalAlpha = rgba.pop();
-		}
-		for (var i = rgba.length; i < 3; ++i) {
-			rgba.push(0);
-		}
-		state.color = rgba;
-		this.updateTool();
-	};
-	
-	APIprototype.updateTool = function () {
-		var lw = 1 + floor(pow(this.state.strokeSize / 1000.0, 2));
-		var sb = floor(pow(this.state.strokeSoftness, 1.3) / 300.0 * lw);
-		this.state.lineWidth = lw;
-		this.state.shadowBlur = sb;
-	};
-	
-	APIprototype.updateDisplayCanvas = function (noTrigger) {
-		if (this.state.enableZoom === false) {
-			return this;
-		}
-		var dctx = this.displayCtx(),
-			off = this.state.currentOffset,
-			zoom = this.state.currentZoom, 
-			dw = dctx.canvas.width,
-			dh = dctx.canvas.height,
-			sw = floor(dw / zoom),
-			sh = floor(dh / zoom);
-		dctx.clearRect(0, 0, dw, dh);
-		if (noTrigger !== true) this.trigger('display.update:before');
-		dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
-		if (noTrigger !== true) this.trigger('display.update:after');
-	};
-	
-	/* this version attempts at better performance by drawing only the bounding rect of the changes
-	APIprototype.updateDisplayCanvas = function (noTrigger, tl, br) {
-		if (this.state.enableZoom === false) {
-			return this;
-		}
-		var dctx = this.displayCtx(),
-			off = this.state.currentOffset,
-			zoom = this.state.currentZoom,
-			// bounding rect of the change
-			stl = tl || { x: 0, y: 0 },
-			sbr = br || { x: this._canvas.width, y: this._canvas.height },
-			dtl = { x: floor((stl.x - off.x)*zoom), y: floor((stl.y - off.y)*zoom) },
-			dbr = { x: floor((sbr.x - off.x)*zoom), y: floor((sbr.y - off.y)*zoom) },
-			sw = sbr.x - stl.x,
-			sh = sbr.y - stl.y,
-			dw = dbr.x - dtl.x,
-			dh = dbr.y - dtl.y;
-		if (sw === 0 || sh === 0) {
-			return;
-		}
-		// only clear and draw what we need to
-		dctx.clearRect(dtl.x, dtl.y, dw, dh);
-		if (noTrigger !== true) this.trigger('display.update:before');
-		dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
-		if (noTrigger !== true) this.trigger('display.update:after');
-	};*/
-	
-	
-	// API
-	
-	// returns the HTML Canvas element associated with this tdcanvas
-	APIprototype.canvas = function () {
-	    return this._canvas;
-	};
+            if (e.type === 'touchend' && e.touches.length > 1) {
+                return true;
+            }
 
-	// returns a 2d rendering context for the canvas element
-	APIprototype.ctx = function () {
-	    return this._ctx || (this._ctx = this._canvas.getContext('2d'));
-	};
-	
-	APIprototype.displayCanvas = function () {
-		return this._displayCanvas;
-	};
-	
-	APIprototype.displayCtx = function () {
-		return this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d'));
-	};
-	
-	// this should be called when removing a canvas to avoid event leaks
-	APIprototype.destroy = function () {
-		this.unbindEvents();
-	};
-	
-	// sets the cursor css to be used when the mouse is over the canvas element
-	APIprototype.cursor = function (c) {
-	    if (!c) {
-	        c = "default";
-	    }
-	    var cursors = c.split(/,\s*/);
-	    do {
-	    	c = cursors.shift();
-	    	this.element.style.cursor = c;
-	    } while (c.length && this.element.style.cursor != c);
-	    return this;
-	};
-	
-	// clears the canvas and (unless noCheckpoint===TRUE) pushes to the undoable history
-	APIprototype.clear = function (noCheckpoint) {
-	    var self = this,
-			ctx = self.ctx();
-		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		if (noCheckpoint !== TRUE) {
-			self.history.checkpoint();
-		}
-		self.updateDisplayCanvas();
-		return self;
-	};
-	
-	// resets the default tool and properties
-	APIprototype.defaults = function () {
-		var self = this;
-		self.setTool('pencil');
-		self.setAlpha(defaults.alpha);
-		self.setColor(defaults.color);
-		self.setStrokeSize(defaults.strokeSize);
-		self.setStrokeSoftness(defaults.strokeSoftness);
-		return self;
-	};
-	
-	// returns a data url (image/png) of the canvas,
-	// optionally a portion of the canvas specified by x, y, w, h
-	APIprototype.toDataURL = function (x, y, w, h) {
-		if (w && h) {
-			w = parseInt(w);
-			h = parseInt(h);
-			x = x !== UNDEFINED ? x : 0;
-			y = y !== UNDEFINED ? y : 0;
-			
-			var tmpcanvas = this.getTempCanvas(w, h);
-			tmpcanvas.getContext('2d').drawImage(this.canvas(), x, y, w, h, 0, 0, w, h);
-			return tmpcanvas.toDataURL();
-		}
-		return this.canvas().toDataURL();
-	};
-	
-	// returns a new (blank) canvas element the same size as this tdcanvas element
-	APIprototype.getTempCanvas = function (w, h) {
-		return new Canvas(w || this._canvas.width, h || this._canvas.height);
-	};
+            state.mouseDown = false;
+            state.tool.up(state.last);
+            self.trigger('mouseup', state.last, e);
 
-	// draws an image data url to the canvas and when it's finished, calls the given callback function
-	APIprototype.fromDataURL = APIprototype.fromImageURL = function (url, cb) {
-		var self = this,
-			img = new Image();
-		img.onload = function () {
-			self.clear(TRUE);
-			self.ctx().drawImage(img, 0, 0);
-			self.updateDisplayCanvas();
-			if (typeof cb == 'function') {
-				cb.call(self);
-			}
-		};
-		img.src = url;
-		return self;
-	};
-	
-	// returns true if the canvas has no data
-	APIprototype.isBlank = function () {
-		var data = this.getImageData().data;
-		var len = data.length;
-		for (var i = 0, l = len; i < l; ++i) {
-			if (data[i] !== 0) return false;
-		}
-		return true;
-	};
-	
-	// clears the canvas and draws the supplied image, video or canvas element
-	APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
-		this.clear(TRUE);
-		this.ctx().drawImage(element, 0, 0);
-		this.updateDisplayCanvas();
-		return this;
-	};
+            if (state.wacomWasEraser === true) {
+                self.previousTool();
+                state.wacomWasEraser = false;
+            }
 
-	// returns the ImageData of the whole canvas element
-	APIprototype.getImageData = function () {
-		var ctx = this.ctx();
-	    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-	};
+            document.onselectstart = function() { return true; };
+            e.preventDefault();
+            return false;
+        }
 
-	// sets the ImageData of the canvas
-	APIprototype.putImageData = function (data) {
-		this.ctx().putImageData(data, 0, 0);
-		this.updateDisplayCanvas();
-		return this;
-	};
-	
-	// returns the current color in the form [r, g, b, a] (where each can be [0,255])
-	APIprototype.getColor = function () {
-	    return this.state.color.slice();
-	};
-	
-	// sets the current color, either as an array (see getColor) or any acceptable css color string
-	APIprototype.setColor = function (color) {
-		if (!_.isArray(color)) {
-			color = TeledrawCanvas.util.parseColorString(color);
-		}
-		this.setRGBAArrayColor(color);
-		return this;
-	};
-	
-	// sets the current alpha to a, where a is a number in [0,1]
-	APIprototype.setAlpha = function (a) {
-		this.state.globalAlpha = clamp(a, 0, 1);
-		return this;
-	};
-	
-	// returns the current alpha
-	APIprototype.getAlpha = function () {
-		return this.state.globalAlpha;
-	};
-	
-	// sets the current stroke size to s, where a is a number in [minStrokeSize, maxStrokeSize]
-	// lineWidth = 1 + floor(pow(strokeSize / 1000.0, 2));
-	APIprototype.setStrokeSize = function (s) {
-		this.state.strokeSize = clamp(s, this.state.minStrokeSize, this.state.maxStrokeSize);
-		this.updateTool();
-		return this;
-	};
-	
-	// sets the current stroke size to s, where a is a number in [minStrokeSoftness, maxStrokeSoftness]
-	APIprototype.setStrokeSoftness = function (s) {
-		this.state.strokeSoftness = clamp(s, this.state.minStrokeSoftness, this.state.maxStrokeSoftness);
-		this.updateTool();
-		return this;
-	};
-	
-	// set the current tool, given the string name of the tool (e.g. 'pencil')
-	APIprototype.setTool = function (name) {
-		if (this.state.currentTool === name) {
-			return this;
-		}
-		this.state.previousTool = this.state.currentTool;
-		this.state.currentTool = name;
-		if (!TeledrawCanvas.tools[name]) {
-			throw new Error('Tool "'+name+'" not defined.');
-		}
-		this.state.tool = new TeledrawCanvas.tools[name](this);
-		this.updateTool();
-		return this;
-	};
-	
-	
-	APIprototype.previousTool = function () {
-		return this.setTool(this.state.previousTool);
-	};
-	
-	// undo to the last history checkpoint (if available)
-	APIprototype.undo = function () {
-		this.history.undo();
-		return this;
-	};
-	
-	// redo to the next history checkpoint (if available)
-	APIprototype.redo = function () {
-		this.history.redo();
-		return this;
-	};
-	
-	// resize the display canvas to the given width and height
-	// (throws an error if it's not the same aspect ratio as the source canvas)
-	// @todo/consider: release this constraint and just change the size of the source canvas?
-	APIprototype.resize = function (w, h) {
-		if (this.state.enableZoom === false) {
-			return this;
-		}
-		var self = this,
-			ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
-			ar1 = Math.round(w/h*100)/100;
-		if (ar0 !== ar1) {
-			throw new Error('Not the same aspect ratio!');
-		}
-		self._displayCanvas.width = self.state.width = w;
-		self._displayCanvas.height = self.state.height = h;
-		return self.zoom(self.state.currentZoom);
-	};
-	
-	// zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
-	// optionally at a given point (in display canvas coordinates)
-	// otherwise in the center of the current display
-	// if no arguments are specified, returns the current zoom level
-	APIprototype.zoom = function (z, x, y) {
-		if (arguments.length === 0) {
-			return this.state.currentZoom;
-		}
-		if (this.state.enableZoom === false) {
-			return this;
-		}
-		var self = this,
-			panx = 0, 
-			pany = 0,
-			currentZoom = self.state.currentZoom,
-			displayWidth = self._displayCanvas.width,
-			displayHeight = self._displayCanvas.height;
-			
-		// if no point is specified, use the center of the canvas
-		x = clamp(x || displayWidth/2, 0, displayWidth);
-		y = clamp(y || displayHeight/2, 0, displayHeight);
-		
-		// restrict the zoom
-		z = clamp(z || 0, displayWidth / self._canvas.width, self.state.maxZoom);
-		
-		// figure out where to zoom at
-		if (z !== currentZoom) {
-			if (z > currentZoom) {
-				// zooming in
-				panx = -(displayWidth/currentZoom - displayWidth/z)/2 - (x - displayWidth/2)/currentZoom;
-				pany = -(displayHeight/currentZoom - displayHeight/z)/2 - (y - displayHeight/2)/currentZoom;
-			} else if (z < currentZoom) {
-				// zooming out
-				panx = (displayWidth/z - displayWidth/currentZoom)/2;
-				pany = (displayHeight/z - displayHeight/currentZoom)/2;
-			}
-			panx *= z;
-			pany *= z;
-		}
-		self.state.currentZoom = z;
-		self.trigger('zoom', z, currentZoom);
-		self.pan(panx, pany);
-		self.updateDisplayCanvas();
-		return self;
-	};
-	
-	// pan the canvas to the given (relative) x,y position
-	// unless absolute === TRUE
-	// if no arguments are specified, returns the current absolute position
-	APIprototype.pan = function (x, y, absolute) {
-		if (arguments.length === 0) {
-			return this.state.currentOffset;
-		}
-		if (this.state.enableZoom === false) {
-			return this;
-		}
-		var self = this,
-			zoom = self.state.currentZoom,
-			currentX = self.state.currentOffset.x,
-			currentY = self.state.currentOffset.y,
-			maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
-			maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
-		x = absolute === TRUE ? x/zoom : currentX - (x || 0)/zoom;
-		y = absolute === TRUE ? y/zoom : currentY - (y || 0)/zoom;
-		x = floor(clamp(x, 0, maxWidth));
-		y = floor(clamp(y, 0, maxHeight))
-		self.state.currentOffset = { x: x, y: y };
-		self.trigger('pan', self.state.currentOffset);
-		self.updateDisplayCanvas();
-		return self;
-	};
-	
-	// events mixin
-	_.extend(APIprototype, Events);
-	TeledrawCanvas.api = API;
+        function gestureStart(evt) {
+            if (state.tool.name === 'grab') {
+                gInitZoom = state.currentZoom;
+            }
+        }
+
+        function gestureChange(evt) {
+            if (state.tool.name === 'grab') {
+                var pt = state.last;
+                self.zoom(gInitZoom*evt.scale, pt.xd, pt.yd);
+            }
+            evt.preventDefault();
+            return false;
+        }
+
+        function gestureEnd(evt) {
+
+        }
+
+        function getCoord(e) {
+            var off = getOffset(element),
+                pageX = e.pageX || e.touches && e.touches[0].pageX,
+                pageY = e.pageY || e.touches && e.touches[0].pageY,
+                pressure = null;
+            if (state.enableWacomSupport) {
+                if (Date.now() - lastpressure > 25) {
+                    lastpressure = Date.now();
+                    pressure = wacomGetPressure();
+                }
+            }
+
+            return {
+                x: floor((pageX - off.left)/state.currentZoom) + state.currentOffset.x || 0,
+                y: floor((pageY - off.top)/state.currentZoom) + state.currentOffset.y || 0,
+                xd: floor(pageX - off.left) || 0,
+                yd: floor(pageY - off.top) || 0,
+                p: pressure
+            };
+        }
+    };
+
+    APIprototype.setRGBAArrayColor = function (rgba) {
+        var state = this.state;
+        if (rgba.length === 4) {
+            this.setAlpha(rgba.pop());
+        }
+        for (var i = rgba.length; i < 3; ++i) {
+            rgba.push(0);
+        }
+        var old = state.color;
+        state.color = rgba;
+        this.trigger('tool.color', state.color, old);
+        return this;
+    };
+
+    APIprototype.updateTool = function () {
+        var lw = 1 + floor(pow(this.state.strokeSize / 1000.0, 2));
+        var sb = floor(pow(this.state.strokeSoftness, 1.3) / 300.0 * lw);
+        this.state.lineWidth = lw;
+        this.state.shadowBlur = sb;
+    };
+
+    APIprototype.updateDisplayCanvas = function (noTrigger) {
+        if (this.state.enableZoom === false) {
+            return this;
+        }
+        var dctx = this.displayCtx(),
+            off = this.state.currentOffset,
+            zoom = this.state.currentZoom,
+            dw = dctx.canvas.width,
+            dh = dctx.canvas.height,
+            sw = floor(dw / zoom),
+            sh = floor(dh / zoom);
+        TeledrawCanvas.util.clear(dctx);
+        if (noTrigger !== true) {
+            this.trigger('display.update:before');
+        }
+        dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
+        if (noTrigger !== true) {
+            this.trigger('display.update:after');
+        }
+    };
+
+    /* this version attempts at better performance by drawing only the bounding rect of the changes
+    APIprototype.updateDisplayCanvas = function (noTrigger, tl, br) {
+        if (this.state.enableZoom === false) {
+            return this;
+        }
+        var dctx = this.displayCtx(),
+            off = this.state.currentOffset,
+            zoom = this.state.currentZoom,
+            // bounding rect of the change
+            stl = tl || { x: 0, y: 0 },
+            sbr = br || { x: this._canvas.width, y: this._canvas.height },
+            dtl = { x: floor((stl.x - off.x)*zoom), y: floor((stl.y - off.y)*zoom) },
+            dbr = { x: floor((sbr.x - off.x)*zoom), y: floor((sbr.y - off.y)*zoom) },
+            sw = sbr.x - stl.x,
+            sh = sbr.y - stl.y,
+            dw = dbr.x - dtl.x,
+            dh = dbr.y - dtl.y;
+        if (sw === 0 || sh === 0) {
+            return;
+        }
+        // only clear and draw what we need to
+        dctx.clearRect(dtl.x, dtl.y, dw, dh);
+        if (noTrigger !== true) this.trigger('display.update:before');
+        dctx.drawImage(this._canvas, stl.x, stl.y, sw, sh, dtl.x, dtl.y, dw, dh);
+        if (noTrigger !== true) this.trigger('display.update:after');
+    };*/
+
+
+    // API
+
+    // returns the HTML Canvas element associated with this tdcanvas
+    APIprototype.canvas = function () {
+        return this._canvas;
+    };
+
+    // returns a 2d rendering context for the canvas element
+    APIprototype.ctx = function () {
+        return this._ctx || (this._ctx = this._canvas.getContext('2d'));
+    };
+
+    APIprototype.displayCanvas = function () {
+        return this._displayCanvas;
+    };
+
+    APIprototype.displayCtx = function () {
+        return this._displayCtx || (this._displayCtx = this._displayCanvas.getContext('2d'));
+    };
+
+    // this should be called when removing a canvas to avoid event leaks
+    APIprototype.destroy = function () {
+        this.unbindEvents();
+    };
+
+    // sets the cursor css to be used when the mouse is over the canvas element
+    APIprototype.cursor = function (c) {
+        if (!c) {
+            c = "default";
+        }
+        var cursors = c.split(/,\s*/);
+        do {
+            c = cursors.shift();
+            this.element.style.cursor = c;
+        } while (c.length && this.element.style.cursor !== c);
+        return this;
+    };
+
+    // clears the canvas and (unless noCheckpoint===true) pushes to the undoable history
+    APIprototype.clear = function (noCheckpoint) {
+        var self = this;
+        TeledrawCanvas.util.clear(self.ctx());
+        if (noCheckpoint !== true) {
+            self.history.checkpoint();
+        }
+        self.updateDisplayCanvas();
+        self.trigger('clear');
+        return self;
+    };
+
+    // resets the default tool and properties
+    APIprototype.defaults = function () {
+        var self = this;
+        self.setTool(toolDefaults.tool);
+        self.setAlpha(toolDefaults.alpha);
+        self.setColor(toolDefaults.color);
+        self.setStrokeSize(toolDefaults.strokeSize);
+        self.setStrokeSoftness(toolDefaults.strokeSoftness);
+        return self;
+    };
+
+    // returns a data url (image/png) of the canvas,
+    // optionally a portion of the canvas specified by sx, sy, sw, sh, and output size by dw, dh
+    APIprototype.toDataURL = function (sx, sy, sw, sh, dw, dh) {
+        if (arguments.length >= 4) {
+            sx = sx || 0;
+            sy = sy || 0;
+            dw = dw || sw;
+            dh = dh || sh;
+            var tmpcanvas = this.getTempCanvas(dw, dh);
+            tmpcanvas.getContext('2d').drawImage(this.canvas(), sx, sy, sw, sh, 0, 0, dw, dh);
+            return tmpcanvas.toDataURL();
+        }
+        return this.canvas().toDataURL();
+    };
+
+    // returns a new (blank) canvas element the same size as this tdcanvas element
+    APIprototype.getTempCanvas = function (w, h) {
+        return new Canvas(w || this._canvas.width, h || this._canvas.height);
+    };
+
+    // draws an image data url to the canvas and when it's finished, calls the given callback function
+    APIprototype.fromDataURL = APIprototype.fromImageURL = function (url, cb) {
+        var self = this,
+            img = new Image();
+        img.onload = function () {
+            self.clear(true);
+            self.ctx().drawImage(img, 0, 0);
+            self.updateDisplayCanvas();
+            if (typeof cb === 'function') {
+                cb.call(self);
+            }
+        };
+        img.src = url;
+        return self;
+    };
+
+    // returns trueif the canvas has no data
+    APIprototype.isBlank = function () {
+        var data = this.getImageData().data;
+        var len = data.length;
+        for (var i = 0, l = len; i < l; ++i) {
+            if (data[i] !== 0) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    // clears the canvas and draws the supplied image, video or canvas element
+    APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
+        this.clear(true);
+        this.ctx().drawImage(element, 0, 0);
+        this.updateDisplayCanvas();
+        return this;
+    };
+
+    // returns the ImageData of the whole canvas element
+    APIprototype.getImageData = function () {
+        var ctx = this.ctx();
+        return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+    };
+
+    // sets the ImageData of the canvas
+    APIprototype.putImageData = function (data) {
+        this.ctx().putImageData(data, 0, 0);
+        this.updateDisplayCanvas();
+        return this;
+    };
+
+    // returns the current color in the form [r, g, b, a], e.g. [255, 0, 0, 0.5]
+    APIprototype.getColor = function () {
+        return this.state.color.slice();
+    };
+
+    // sets the current color, either as an array (see getColor) or any acceptable css color string
+    APIprototype.setColor = function (color) {
+        if (!_.isArray(color)) {
+            color = TeledrawCanvas.util.parseColorString(color);
+        }
+        this.setRGBAArrayColor(color);
+        return this;
+    };
+
+    // sets the current alpha to a, where a is a number in [0,1]
+    APIprototype.setAlpha = function (a) {
+        var old = this.state.globalAlpha;
+        this.state.globalAlpha = clamp(a, 0, 1);
+        this.trigger('tool.alpha', this.state.globalAlpha, old);
+        return this;
+    };
+
+    // returns the current alpha
+    APIprototype.getAlpha = function () {
+        return this.state.globalAlpha;
+    };
+
+    // sets the current stroke size to s, where a is a number in [minStrokeSize, maxStrokeSize]
+    // lineWidth = 1 + floor(pow(strokeSize / 1000.0, 2));
+    APIprototype.setStrokeSize = function (s) {
+        var old = this.state.strokeSize;
+        this.state.strokeSize = clamp(s, this.state.minStrokeSize, this.state.maxStrokeSize);
+        this.updateTool();
+        this.trigger('tool.size', this.state.strokeSize, old);
+        return this;
+    };
+
+    // sets the current stroke size to s, where a is a number in [minStrokeSoftness, maxStrokeSoftness]
+    APIprototype.setStrokeSoftness = function (s) {
+        var old = this.state.strokeSoftness;
+        this.state.strokeSoftness = clamp(s, this.state.minStrokeSoftness, this.state.maxStrokeSoftness);
+        this.updateTool();
+        this.trigger('tool.softness', this.state.strokeSoftness, old);
+        return this;
+    };
+
+    // set the current tool, given the string name of the tool (e.g. 'pencil')
+    APIprototype.setTool = function (name) {
+        if (this.state.currentTool === name) {
+            return this;
+        }
+        this.state.previousTool = this.state.currentTool;
+        this.state.currentTool = name;
+        if (!TeledrawCanvas.tools[name]) {
+            throw new Error('Tool "'+name+'" not defined.');
+        }
+        this.state.tool = new TeledrawCanvas.tools[name](this);
+        this.trigger('tool.change', this.state.currentTool, this.state.previousTool);
+        return this;
+    };
+
+
+    APIprototype.previousTool = function () {
+        return this.setTool(this.state.previousTool);
+    };
+
+    // undo to the last history checkpoint (if available)
+    APIprototype.undo = function () {
+        this.history.undo();
+        this.trigger('history undo', this.history.past.length, this.history.future.length);
+        return this;
+    };
+
+    // redo to the next history checkpoint (if available)
+    APIprototype.redo = function () {
+        this.history.redo();
+        this.trigger('history redo', this.history.past.length, this.history.future.length);
+        return this;
+    };
+
+    // resize the display canvas to the given width and height
+    // (throws an error if it's not the same aspect ratio as the source canvas)
+    // @todo/consider: release this constraint and just change the size of the source canvas?
+    APIprototype.resize = function (w, h) {
+        if (this.state.enableZoom === false) {
+            return this;
+        }
+        var self = this,
+            ar0 = Math.round(self._canvas.width/self._canvas.height*100)/100,
+            ar1 = Math.round(w/h*100)/100;
+        if (ar0 !== ar1) {
+            throw new Error('Not the same aspect ratio!');
+        }
+        self._displayCanvas.width = self.state.width = w;
+        self._displayCanvas.height = self.state.height = h;
+        this.trigger('resize', w, h);
+        return self.zoom(self.state.currentZoom);
+    };
+
+    // zoom the canvas to the given multiplier, z (e.g. if z is 2, zoom to 2:1)
+    // optionally at a given point (in display canvas coordinates)
+    // otherwise in the center of the current display
+    // if no arguments are specified, returns the current zoom level
+    APIprototype.zoom = function (z, x, y) {
+        if (arguments.length === 0) {
+            return this.state.currentZoom;
+        }
+        if (this.state.enableZoom === false) {
+            return this;
+        }
+        var self = this,
+            panx = 0,
+            pany = 0,
+            currentZoom = self.state.currentZoom,
+            displayWidth = self._displayCanvas.width,
+            displayHeight = self._displayCanvas.height;
+
+        // if no point is specified, use the center of the canvas
+        x = clamp(x || displayWidth/2, 0, displayWidth);
+        y = clamp(y || displayHeight/2, 0, displayHeight);
+
+        // restrict the zoom
+        z = clamp(z || 0, displayWidth / self._canvas.width, self.state.maxZoom);
+
+        // figure out where to zoom at
+        if (z !== currentZoom) {
+            if (z > currentZoom) {
+                // zooming in
+                panx = -(displayWidth/currentZoom - displayWidth/z)/2 - (x - displayWidth/2)/currentZoom;
+                pany = -(displayHeight/currentZoom - displayHeight/z)/2 - (y - displayHeight/2)/currentZoom;
+            } else if (z < currentZoom) {
+                // zooming out
+                panx = (displayWidth/z - displayWidth/currentZoom)/2;
+                pany = (displayHeight/z - displayHeight/currentZoom)/2;
+            }
+            panx *= z;
+            pany *= z;
+        }
+        self.state.currentZoom = z;
+        self.trigger('zoom', z, currentZoom);
+        self.pan(panx, pany);
+        self.updateDisplayCanvas();
+        return self;
+    };
+
+    // pan the canvas to the given (relative) x,y position
+    // unless absolute === true    // if no arguments are specified, returns the current absolute position
+    APIprototype.pan = function (x, y, absolute) {
+        if (arguments.length === 0) {
+            return this.state.currentOffset;
+        }
+        if (this.state.enableZoom === false) {
+            return this;
+        }
+        var self = this,
+            zoom = self.state.currentZoom,
+            currentX = self.state.currentOffset.x,
+            currentY = self.state.currentOffset.y,
+            maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
+            maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
+        x = absolute === true ? x/zoom : currentX - (x || 0)/zoom;
+        y = absolute === true ? y/zoom : currentY - (y || 0)/zoom;
+        x = floor(clamp(x, 0, maxWidth));
+        y = floor(clamp(y, 0, maxHeight));
+        self.state.currentOffset = { x: x, y: y };
+        self.trigger('pan', self.state.currentOffset, { x: currentX, y: currentY });
+        self.updateDisplayCanvas();
+        return self;
+    };
+
+    // events mixin
+    _.extend(APIprototype, Events);
+    TeledrawCanvas.api = API;
 })(TeledrawCanvas);
 
 
@@ -2795,52 +2822,56 @@ Vector.create = function (o) {
  */
 
 (function (TeledrawCanvas) {
-	var History = function (canvas) {
-		this.canvas = canvas;
-		this.rev = 0;
-		this.clear();
-	};
-	
-	History.prototype.clear = function () {
-		this.past = [];
-		this.current = null;
-		this.future = [];
-	};
+    var History = function (canvas) {
+        this.canvas = canvas;
+        this.rev = 0;
+        this.clear();
+    };
 
-	History.prototype.checkpoint = function () {
-	    if (this.past.length > this.canvas.state.maxHistory) {
-			this.past.shift().destroy();
-	    }
-	    
-	    if (this.current) {
-			this.past.push(this.current);
-	    }
-	    this.current = new TeledrawCanvas.Snapshot(this.canvas);
-	    this.future = [];
-	    this.rev++;
-	};
+    History.prototype.clear = function () {
+        this.past = [];
+        this.current = null;
+        this.future = [];
+    };
 
-	History.prototype.undo = function () {
-	    if (this._move(this.past, this.future)) {
-	    	this.rev--;
-	    }
-	};
+    History.prototype.checkpoint = function () {
+        if (this.past.length > this.canvas.state.maxHistory) {
+            this.past.shift().destroy();
+        }
 
-	History.prototype.redo = function () {
-	    if (this._move(this.future, this.past)) {
-	    	this.rev++;
-	    }
-	};
-	
-	History.prototype._move = function(from, to) {
-	    if (!from.length) return FALSE;
-	    if (!this.current) return FALSE;
-	    to.push(this.current);
-		this.current = from.pop();
-		this.current.restore();
-		return TRUE;
-	};
-	TeledrawCanvas.History = History;
+        if (this.current) {
+            this.past.push(this.current);
+        }
+        this.current = new TeledrawCanvas.Snapshot(this.canvas);
+        this.future = [];
+        this.rev++;
+    };
+
+    History.prototype.undo = function () {
+        if (this._move(this.past, this.future)) {
+            this.rev--;
+        }
+    };
+
+    History.prototype.redo = function () {
+        if (this._move(this.future, this.past)) {
+            this.rev++;
+        }
+    };
+
+    History.prototype._move = function(from, to) {
+        if (!from.length) {
+            return false;
+        }
+        if (!this.current) {
+            return false;
+        }
+        to.push(this.current);
+        this.current = from.pop();
+        this.current.restore();
+        return true;
+    };
+    TeledrawCanvas.History = History;
 })(TeledrawCanvas);
 
 /**
@@ -2848,859 +2879,918 @@ Vector.create = function (o) {
  */
 
 (function (TeledrawCanvas) {
-	var Snapshot = function (canvas) {
-		this.canvas = canvas;
-		if (!this.canvas._snapshotBuffers) {
-			this.canvas._snapshotBuffers = [];
-		}
-		this._snapshotBufferCanvas();
-	};
+    var Snapshot = function (canvas) {
+        this.canvas = canvas;
+        if (!this.canvas._snapshotBuffers) {
+            this.canvas._snapshotBuffers = [];
+        }
+        this._snapshotBufferCanvas();
+    };
 
-	Snapshot.prototype.restore = function (stroke) {
-		var tl, br;
-		if (stroke) {
-			tl = stroke.tl;
-			br = stroke.br;
-		} else {
-			tl = { x:0, y:0 };
-			br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
-		}
-		this._restoreBufferCanvas(tl, br);
-		this.canvas.updateDisplayCanvas(false, tl, br);
-	};
-	
-	Snapshot.prototype.destroy = function () {
-		this._putBufferCtx();
-	};
-	
-	Snapshot.prototype.toDataURL = function () {
-		return this.buffer && this.buffer.toDataURL();
-	};
-	
-	// doing this with a buffer canvas instead of get/put image data seems to be significantly faster
-	Snapshot.prototype._snapshotBufferCanvas = function () {
-		this._getBufferCtx();
-	    this.buffer.drawImage(this.canvas.canvas(), 0, 0);
-	};
-	
-	Snapshot.prototype._restoreBufferCanvas = function (tl, br) {
-		var ctx = this.canvas.ctx();
-		
-		var w = br.x - tl.x, h = br.y - tl.y;
-		if (w === 0 || h === 0) {
-			return;
-		}
-		ctx.clearRect(tl.x, tl.y, w, h);
-	    ctx.drawImage(this.buffer.canvas, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
-	};
+    Snapshot.prototype.restore = function (stroke) {
+        var tl, br;
+        if (stroke) {
+            tl = stroke.tl;
+            br = stroke.br;
+        } else {
+            tl = { x:0, y:0 };
+            br = { x:this.canvas.canvas().width, y:this.canvas.canvas().height };
+        }
+        this._restoreBufferCanvas(tl, br);
+        this.canvas.updateDisplayCanvas(false, tl, br);
+    };
 
-	Snapshot.prototype._snapshotImageData = function () {
-	    this.data = this.canvas.getImageData();
-	};
-	
-	Snapshot.prototype._restoreImageData = function () {
-	    this.canvas.putImageData(this.data);
-	};
-	
-	Snapshot.prototype._putBufferCtx = function () {
-		if (this.buffer) {
-			this.canvas._snapshotBuffers.push(this.buffer);
-		}
-		this.buffer = null;
-	};
-	
-	Snapshot.prototype._getBufferCtx = function () {
-		var ctx;
-		if (!this.buffer) {
-			if (this.canvas._snapshotBuffers.length) {
-				ctx = this.canvas._snapshotBuffers.pop();
-				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-			} else {
-				ctx = this.canvas.getTempCanvas().getContext('2d');
-			}
-		}
-		this.buffer = ctx;
-	};
-	
-	TeledrawCanvas.Snapshot = Snapshot;
+    Snapshot.prototype.destroy = function () {
+        this._putBufferCtx();
+    };
+
+    Snapshot.prototype.toDataURL = function () {
+        return this.buffer && this.buffer.toDataURL();
+    };
+
+    // doing this with a buffer canvas instead of get/put image data seems to be significantly faster
+    Snapshot.prototype._snapshotBufferCanvas = function () {
+        this._getBufferCtx();
+        this.buffer.drawImage(this.canvas.canvas(), 0, 0);
+    };
+
+    Snapshot.prototype._restoreBufferCanvas = function (tl, br) {
+        var ctx = this.canvas.ctx();
+
+        var w = br.x - tl.x, h = br.y - tl.y;
+        if (w === 0 || h === 0) {
+            return;
+        }
+        ctx.clearRect(tl.x, tl.y, w, h);
+        ctx.drawImage(this.buffer.canvas, tl.x, tl.y, w, h, tl.x, tl.y, w, h);
+    };
+
+    Snapshot.prototype._snapshotImageData = function () {
+        this.data = this.canvas.getImageData();
+    };
+
+    Snapshot.prototype._restoreImageData = function () {
+        this.canvas.putImageData(this.data);
+    };
+
+    Snapshot.prototype._putBufferCtx = function () {
+        if (this.buffer) {
+            this.canvas._snapshotBuffers.push(this.buffer);
+        }
+        this.buffer = null;
+    };
+
+    Snapshot.prototype._getBufferCtx = function () {
+        var ctx;
+        if (!this.buffer) {
+            if (this.canvas._snapshotBuffers.length) {
+                ctx = this.canvas._snapshotBuffers.pop();
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            } else {
+                ctx = this.canvas.getTempCanvas().getContext('2d');
+            }
+        }
+        this.buffer = ctx;
+    };
+
+    TeledrawCanvas.Snapshot = Snapshot;
 })(TeledrawCanvas);
 
 /**
  * TeledrawCanvas.Stroke
  */
 (function (TeledrawCanvas) {
-	var Stroke = function (canvas) {
-		this.canvas = canvas;
-	};
-	
-	Stroke.prototype.start = function (pt) {};
-	Stroke.prototype.move = function (pt1, pt2) {};
-	Stroke.prototype.end = function () {};
-	Stroke.prototype.draw = function () {};
+    var Stroke = function (canvas) {
+        this.canvas = canvas;
+    };
 
-	Stroke.prototype.save = function () {
-	    this.snapshot = new TeledrawCanvas.Snapshot(this.canvas);
-	};
+    Stroke.prototype.start = function (pt) {};
+    Stroke.prototype.move = function (pt1, pt2) {};
+    Stroke.prototype.end = function () {};
+    Stroke.prototype.draw = function () {};
 
-	Stroke.prototype.restore = function () {
-	    this.snapshot.restore(this);
-	};	
-	
-	Stroke.prototype.destroy = function () {
-	    this.snapshot.destroy();
-	};	
-	
-	TeledrawCanvas.Stroke = Stroke;
+    Stroke.prototype.save = function () {
+        this.snapshot = new TeledrawCanvas.Snapshot(this.canvas);
+    };
+
+    Stroke.prototype.restore = function () {
+        this.snapshot.restore(this);
+    };
+
+    Stroke.prototype.destroy = function () {
+        this.snapshot.destroy();
+    };
+
+    TeledrawCanvas.Stroke = Stroke;
 })(TeledrawCanvas);
 
 /**
  * TeledrawCanvas.Tool
  */
 (function (TeledrawCanvas) {
-	var Tool = function () {};
+    var Tool = function () {};
 
-	Tool.prototype.down = function (pt) {};
-	Tool.prototype.up = function (pt) {};
-	Tool.prototype.move = function (mouseDown, from, to) {};
-	Tool.prototype.dblclick = function (pt) {};
-	Tool.prototype.enter = function (mouseDown, pt) {};
-	Tool.prototype.leave = function (mouseDown, pt) {};
-	Tool.prototype.keydown = function (mouseDown, key) {
-		if (key === 16) {
-			this.shiftKey = true;
-			if (mouseDown) {
-	        	this._updateBoundaries({});
-				this.draw();
-			}
-		}
-	};
-	Tool.prototype.keyup = function (mouseDown, key) {
-		if (key === 16) {
-			this.shiftKey = false;
-			if (mouseDown) {
-	        	this._updateBoundaries({});
-	        	this.draw();
-	        }
-		}
-	};
-	Tool.prototype.preview = function () {};
-	Tool.prototype.alt_down = function () {};
-	Tool.prototype.alt_up = function () {};
-	
-	// A factory for creating tools
-	Tool.createTool = function (name, cursor, ctor) {
-		var Stroke = function (canvas) {
-			this.canvas = canvas;
-			this.ctx = canvas.ctx();
-	        this.color = canvas.getColor();
-	        this.color.push(canvas.getAlpha());
-	        this.points = [];
-	        this.tl = {x: this.ctx.canvas.width, y: this.ctx.canvas.height};
-	        this.br = {x: 0, y: 0};
-	        this.tool = {};
-	    };
-	    Stroke.prototype = new TeledrawCanvas.Stroke();
-	    
-	    var tool = function (canvas) {
-			this.canvas = canvas;
-			canvas.cursor(cursor);
-	        this.name = name;
-	        this.cursor = cursor || 'default';
-	        this.currentStroke = null;
-	        
-	        if (typeof ctor=='function') {
-	        	ctor.call(this);
-	        }
-	    };
-	    
-	    tool.prototype = new Tool();
-	    
-	    tool.prototype.down = function (pt) {
-	    	this.currentStroke = new Stroke(this.canvas);
-	    	this.currentStroke.tool = this;
-	    	this.currentStroke.save();
-	    	this.currentStroke.points.push(pt);
-	    	this.currentStroke.start(pt);
-	        this._updateBoundaries(pt);
-	        this.draw();
-	    };
-	    
-	    tool.prototype.move = function (mdown, from, to) {
-	        if (mdown && this.currentStroke) {
-	        	this.currentStroke.points.push(to);
-	        	this.currentStroke.move(from, to);
-	        	this._updateBoundaries(to);
-	            this.draw();
-	        }
-	    };
-	    
-	    tool.prototype.up = function (pt) {
-	        if (this.currentStroke) {
-	        	this.currentStroke.end(pt);
-	            this.draw();
-	            this.currentStroke.destroy();
-	        	this.currentStroke = null;
-	            this.canvas.history.checkpoint();
-	        }
-	        this.canvas.trigger('tool.up');
-	    };
-	    
-	    tool.prototype.draw = function () {
-	    	this.currentStroke.ctx.save();
-	    	this.currentStroke.restore();
-	    	this.currentStroke.draw();
-			this.canvas.updateDisplayCanvas(false, this.currentStroke.tl, this.currentStroke.br);
-	    	this.currentStroke.ctx.restore();
-	    };
-	    
-	    tool.prototype._updateBoundaries = function (pt) {
-	    	var stroke = this.currentStroke,
-	    		canvas = stroke.ctx.canvas,
-	    		strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
-	    	if (this.shiftKey) {
-	    		// hack to avoid bugginess when shift keying for ellipse, line and rect
-	    		stroke.tl.x = stroke.tl.y = 0;
-	    		stroke.br.x = canvas.width;
-	    		stroke.br.y = canvas.height;
-	    		return;
-	    	}
-	    	if (pt.x - strokeSize < stroke.tl.x) {
-	    		stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
-	    	}
-	    	if (pt.x + strokeSize > stroke.br.x) {
-	    		stroke.br.x = clamp(floor(pt.x + strokeSize), 0, canvas.width);
-	    	}
-	    	if (pt.y - strokeSize < stroke.tl.y) {
-	    		stroke.tl.y = clamp(floor(pt.y - strokeSize), 0, canvas.height);
-	    	}
-	    	if (pt.y + strokeSize > stroke.br.y) {
-	    		stroke.br.y = clamp(floor(pt.y + strokeSize), 0, canvas.height);
-	    	}
-	    };
-	    
-	    tool.stroke = Stroke;
-	    Stroke.tool = tool;
-	    TeledrawCanvas.tools[name] = tool;
-	    return tool;
-	};
-	
-	TeledrawCanvas.Tool = Tool;
-	TeledrawCanvas.tools = {};
+    Tool.prototype.down = function (pt) {};
+    Tool.prototype.up = function (pt) {};
+    Tool.prototype.move = function (mouseDown, from, to) {};
+    Tool.prototype.dblclick = function (pt) {};
+    Tool.prototype.enter = function (mouseDown, pt) {};
+    Tool.prototype.leave = function (mouseDown, pt) {};
+    Tool.prototype.keydown = function (mouseDown, key) {
+        if (key === 16) {
+            this.shiftKey = true;
+            if (mouseDown) {
+                this._updateBoundaries({});
+                this.draw();
+            }
+        }
+    };
+    Tool.prototype.keyup = function (mouseDown, key) {
+        if (key === 16) {
+            this.shiftKey = false;
+            if (mouseDown) {
+                this._updateBoundaries({});
+                this.draw();
+            }
+        }
+    };
+
+    // should return a preview image (canvas) for this tool
+    Tool.prototype.preview = function (w, h) {
+        return new TeledrawCanvas.Canvas(w || 100, h || 100);
+    };
+
+    // A factory for creating tools
+    Tool.createTool = function (name, cursor, ctor) {
+        var Stroke = function (canvas, ctx) {
+            this.canvas = canvas;
+            this.ctx = ctx || canvas.ctx();
+            this.color = canvas.getColor();
+            this.color.push(canvas.getAlpha());
+            this.points = [];
+            this.tl = {x: this.ctx.canvas.width, y: this.ctx.canvas.height};
+            this.br = {x: 0, y: 0};
+            this.tool = {};
+        };
+        Stroke.prototype = new TeledrawCanvas.Stroke();
+
+        var tool = function (canvas) {
+            this.canvas = canvas;
+            canvas.cursor(cursor);
+            this.name = name;
+            this.cursor = cursor || 'default';
+            this.currentStroke = null;
+
+            if (typeof ctor=='function') {
+                ctor.call(this);
+            }
+        };
+
+        tool.prototype = new Tool();
+
+        tool.prototype.down = function (pt) {
+            this.currentStroke = new Stroke(this.canvas);
+            this.currentStroke.tool = this;
+            this.currentStroke.save();
+            this.currentStroke.points.push(pt);
+            this.currentStroke.start(pt);
+            this._updateBoundaries(pt);
+            this.draw();
+        };
+
+        tool.prototype.move = function (mdown, from, to) {
+            if (mdown && this.currentStroke) {
+                this.currentStroke.points.push(to);
+                this.currentStroke.move(from, to);
+                this._updateBoundaries(to);
+                this.draw();
+            }
+        };
+
+        tool.prototype.up = function (pt) {
+            if (this.currentStroke) {
+                this.currentStroke.end(pt);
+                this.draw();
+                this.currentStroke.destroy();
+                this.currentStroke = null;
+                this.canvas.history.checkpoint();
+            }
+            this.canvas.trigger('tool.up');
+        };
+
+        tool.prototype.draw = function () {
+            this.currentStroke.ctx.save();
+            this.currentStroke.restore();
+            this.currentStroke.draw();
+            this.canvas.updateDisplayCanvas(false, this.currentStroke.tl, this.currentStroke.br);
+            this.currentStroke.ctx.restore();
+        };
+
+        tool.prototype._updateBoundaries = function (pt) {
+            var stroke = this.currentStroke,
+                canvas = stroke.ctx.canvas,
+                strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
+            if (this.shiftKey) {
+                // hack to avoid bugginess when shift keying for ellipse, line and rect
+                stroke.tl.x = stroke.tl.y = 0;
+                stroke.br.x = canvas.width;
+                stroke.br.y = canvas.height;
+                return;
+            }
+            if (pt.x - strokeSize < stroke.tl.x) {
+                stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
+            }
+            if (pt.x + strokeSize > stroke.br.x) {
+                stroke.br.x = clamp(floor(pt.x + strokeSize), 0, canvas.width);
+            }
+            if (pt.y - strokeSize < stroke.tl.y) {
+                stroke.tl.y = clamp(floor(pt.y - strokeSize), 0, canvas.height);
+            }
+            if (pt.y + strokeSize > stroke.br.y) {
+                stroke.br.y = clamp(floor(pt.y + strokeSize), 0, canvas.height);
+            }
+        };
+
+        tool.stroke = Stroke;
+        Stroke.tool = tool;
+        TeledrawCanvas.tools[name] = tool;
+        return tool;
+    };
+
+    TeledrawCanvas.Tool = Tool;
+    TeledrawCanvas.tools = {};
 })(TeledrawCanvas);
 
 /**
  * Ellipse tool
  */
 (function (TeledrawCanvas) {
-	var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair"),
-		EllipseStrokePrototype = Ellipse.stroke.prototype;
+    var Ellipse = TeledrawCanvas.Tool.createTool('ellipse', 'crosshair'),
+        EllipseStrokePrototype = Ellipse.stroke.prototype;
 
-	EllipseStrokePrototype.bgColor = [255, 255, 255];
-	EllipseStrokePrototype.bgAlpha = 0;
-	EllipseStrokePrototype.lineWidth = 1;
-	
-	EllipseStrokePrototype.start = function (pt) {
-	    this.first = pt;
-	};
+    Ellipse.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new Ellipse.stroke(this.canvas, ctx);
+        stroke.first = { x: 0, y: 0 };
+        stroke.second = { x: canv.width, y: canv.height };
+        stroke.draw();
+        return canv;
+    };
 
-	EllipseStrokePrototype.move = function (a, b) {
-	    this.second = b;
-	};
+    EllipseStrokePrototype.bgColor = [255, 255, 255];
+    EllipseStrokePrototype.bgAlpha = 0;
+    EllipseStrokePrototype.lineWidth = 1;
 
-	EllipseStrokePrototype.end = function (pt) {
-	    this.second = pt;
-	};
+    EllipseStrokePrototype.start = function (pt) {
+        this.first = pt;
+    };
 
-	EllipseStrokePrototype.draw = function () {
-	    if (!this.first || !this.second) return;
-	    var self = this,
-	    	x = self.first.x,
-	    	y = self.first.y,
-	    	w = self.second.x - x,
-	    	h = self.second.y - y,
-	    	ctx = self.ctx,
-	    	state = self.canvas.state,
-			shadowOffset = state.shadowOffset,
-			shadowBlur = state.shadowBlur,
-			lineWidth = state.lineWidth,
-			color = TeledrawCanvas.util.cssColor(state.color);
-		
-		ctx.lineJoin = ctx.lineCap = "round";
-		ctx.globalAlpha = state.globalAlpha;
-		ctx.fillStyle = ctx.strokeStyle = color;
-		ctx.miterLimit = 100000;
-	    
-	    if (self.tool.shiftKey) {
-	    	h = self.second.y > y ? abs(w) : -abs(w);
-	    }
-	    
-	    if (self.tool.fill) {
-		    drawEllipse(ctx, x, y, w, h);
-		    ctx.fill();
-	    } else {
-			if (shadowBlur > 0) {
-				ctx.shadowColor = color;
-				ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
-				ctx.shadowBlur = shadowBlur;
-				ctx.translate(-shadowOffset,-shadowOffset);
-			}
-			
-	        ctx.lineWidth = lineWidth;
-		    drawEllipse(ctx, x, y, w, h);
-			ctx.stroke();	
-	    }
-	};
-	
-	function drawEllipse(ctx, x, y, w, h) {
-		var kappa = .5522848;
-			ox = (w / 2) * kappa, // control point offset horizontal
-			oy = (h / 2) * kappa, // control point offset vertical
-			xe = x + w,           // x-end
-			ye = y + h,           // y-end
-			xm = x + w / 2,       // x-middle
-			ym = y + h / 2;       // y-middle
-		
-		ctx.beginPath();
-		ctx.moveTo(x, ym);
-		ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
-		ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
-		ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
-		ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
-		ctx.closePath();
-	}
-	
+    EllipseStrokePrototype.move = function (a, b) {
+        this.second = b;
+    };
+
+    EllipseStrokePrototype.end = function (pt) {
+        this.second = pt;
+    };
+
+    EllipseStrokePrototype.draw = function () {
+        if (!this.first || !this.second) return;
+        var self = this,
+            x = self.first.x,
+            y = self.first.y,
+            w = self.second.x - x,
+            h = self.second.y - y,
+            ctx = self.ctx,
+            state = self.canvas.state,
+            shadowOffset = state.shadowOffset,
+            shadowBlur = state.shadowBlur,
+            lineWidth = state.lineWidth,
+            color = TeledrawCanvas.util.cssColor(state.color);
+
+        ctx.lineJoin = ctx.lineCap = 'round';
+        ctx.globalAlpha = state.globalAlpha;
+        ctx.fillStyle = ctx.strokeStyle = color;
+        ctx.miterLimit = 100000;
+
+        if (self.tool.shiftKey) {
+            h = self.second.y > y ? abs(w) : -abs(w);
+        }
+
+        if (self.tool.fill) {
+            drawEllipse(ctx, x, y, w, h);
+            ctx.fill();
+        } else {
+            if (shadowBlur > 0) {
+                ctx.shadowColor = color;
+                ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
+                ctx.shadowBlur = shadowBlur;
+                ctx.translate(-shadowOffset,-shadowOffset);
+            }
+
+            ctx.lineWidth = lineWidth;
+            drawEllipse(ctx, x, y, w, h);
+            ctx.stroke();
+        }
+    };
+
+    function drawEllipse(ctx, x, y, w, h) {
+        var kappa = 0.5522848;
+            ox = (w / 2) * kappa, // control point offset horizontal
+            oy = (h / 2) * kappa, // control point offset vertical
+            xe = x + w,           // x-end
+            ye = y + h,           // y-end
+            xm = x + w / 2,       // x-middle
+            ym = y + h / 2;       // y-middle
+
+        ctx.beginPath();
+        ctx.moveTo(x, ym);
+        ctx.bezierCurveTo(x, ym - oy, xm - ox, y, xm, y);
+        ctx.bezierCurveTo(xm + ox, y, xe, ym - oy, xe, ym);
+        ctx.bezierCurveTo(xe, ym + oy, xm + ox, ye, xm, ye);
+        ctx.bezierCurveTo(xm - ox, ye, x, ym + oy, x, ym);
+        ctx.closePath();
+    }
+
 })(TeledrawCanvas);
 
 /**
  * Eraser tool
  */
 (function (TeledrawCanvas) {
-	var Eraser = TeledrawCanvas.Tool.createTool("eraser", "crosshair");
-	
-	Eraser.stroke.prototype.lineWidth = 1;
-	Eraser.stroke.prototype.lineCap = 'round';
+    var Eraser = TeledrawCanvas.Tool.createTool('eraser', 'crosshair');
 
-	Eraser.stroke.prototype.draw = function () {
-		this.color = [255, 255, 255, 255];
-	    this.ctx.globalCompositeOperation = 'destination-out';
-	    TeledrawCanvas.tools["pencil"].stroke.prototype.draw.call(this);
-	};
+    Eraser.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canv.width, canv.height);
+        var stroke = new Eraser.stroke(this.canvas, ctx);
+        stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
+        stroke.draw();
+        return canv;
+    };
+
+
+    Eraser.stroke.prototype.lineWidth = 1;
+    Eraser.stroke.prototype.lineCap = 'round';
+
+    Eraser.stroke.prototype.draw = function () {
+        this.color = [255, 255, 255, 255];
+        this.ctx.globalCompositeOperation = 'destination-out';
+        TeledrawCanvas.tools['pencil'].stroke.prototype.draw.call(this);
+    };
 })(TeledrawCanvas);
 
 /**
  * Eyedropper tool
  */
 (function (TeledrawCanvas) {
-	var ctor = function () {
-		this.previewContainer = document.createElement('div');
-		_.extend(this.previewContainer.style, {
-			position: 'absolute',
-			width: '10px',
-			height: '10px',
-			border: '1px solid black',
-			display: 'none'
-		});
-		document.body.appendChild(this.previewContainer);
-		if (this.canvas.state.mouseOver) {
-			this.previewContainer.style.display = 'block';
-		}
-	};
-	var EyeDropper = TeledrawCanvas.Tool.createTool("eyedropper", "crosshair", ctor);
-	
-	EyeDropper.prototype.pick = function (pt) {
-		var previewContainer = this.previewContainer,
-			lightness,
-			left = this.canvas.element.offsetLeft,
-			top = this.canvas.element.offsetTop,
-			pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
-		this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
-		var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
-		_.extend(previewContainer.style, {
-			left: (left + pt.xd + 15) + 'px', 
-			top: (top + pt.yd + 5) + 'px',
-			background: TeledrawCanvas.util.cssColor(this.color),
-			'border-color': lightness >= 50 ? '#000' : '#888'
-		});
-		if (this.canvas.state.mouseOver) {
-			// hack for chrome, since it seems to ignore this and not redraw for some reason...
-			previewContainer.style.display='none';
-			previewContainer.offsetHeight; // no need to store this anywhere, the reference is enough
-			previewContainer.style.display='block';
-		} else {
-			previewContainer.style.display = 'none';
-		}
-	};
+    var ctor = function () {
+        this.previewContainer = document.createElement('div');
+        _.extend(this.previewContainer.style, {
+            position: 'absolute',
+            width: '10px',
+            height: '10px',
+            border: '1px solid black',
+            display: 'none'
+        });
+        document.body.appendChild(this.previewContainer);
+        if (this.canvas.state.mouseOver) {
+            this.previewContainer.style.display = 'block';
+        }
+    };
+    var EyeDropper = TeledrawCanvas.Tool.createTool('eyedropper', 'crosshair', ctor);
 
-	EyeDropper.prototype.enter = function () {
-		this.previewContainer.style.display = 'block';
-	};
-	
-	EyeDropper.prototype.leave = function () {
-		this.previewContainer.style.display = 'none';
-	};
-	
-	EyeDropper.prototype.move = function (down, from, pt) {
-		this.pick(pt);
-	};
-	
-	EyeDropper.prototype.down = function (pt) {
-		this.pick(pt);
-	};
-	
-	EyeDropper.prototype.up = function (pt) {
-	    this.pick(pt);
-		this.canvas.setColor(this.color);
-		this.previewContainer.parentNode.removeChild(this.previewContainer);
-		this.canvas.previousTool();
-	};
+    EyeDropper.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color);
+        ctx.fillRect(0, 0, canv.width, canv.height);
+        return canv;
+    };
+
+    EyeDropper.prototype.pick = function (pt) {
+        var previewContainer = this.previewContainer,
+            lightness,
+            left = this.canvas.element.offsetLeft,
+            top = this.canvas.element.offsetTop,
+            pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
+
+        this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
+        lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
+        _.extend(previewContainer.style, {
+            left: (left + pt.xd + 15) + 'px',
+            top: (top + pt.yd + 5) + 'px',
+            background: TeledrawCanvas.util.cssColor(this.color),
+            'border-color': lightness >= 50 ? '#000' : '#888'
+        });
+        if (this.canvas.state.mouseOver) {
+            // hack for chrome, since it seems to ignore this and not redraw for some reason...
+            previewContainer.style.display='none';
+            previewContainer.offsetHeight = previewContainer.offsetHeight;
+            previewContainer.style.display='block';
+        } else {
+            previewContainer.style.display = 'none';
+        }
+    };
+
+    EyeDropper.prototype.enter = function () {
+        this.previewContainer.style.display = 'block';
+    };
+
+    EyeDropper.prototype.leave = function () {
+        this.previewContainer.style.display = 'none';
+    };
+
+    EyeDropper.prototype.move = function (down, from, pt) {
+        this.pick(pt);
+    };
+
+    EyeDropper.prototype.down = function (pt) {
+        this.pick(pt);
+    };
+
+    EyeDropper.prototype.up = function (pt) {
+        this.pick(pt);
+        this.canvas.setColor(this.color);
+        this.previewContainer.parentNode.removeChild(this.previewContainer);
+        this.canvas.previousTool();
+    };
 })(TeledrawCanvas);
 
 /**
  * Fill tool
  */
 (function (TeledrawCanvas) {
-	var Fill = TeledrawCanvas.Tool.createTool("fill", "crosshair");
-	var abs = Math.abs;
-	
-	Fill.blur = true;
-	Fill.stroke.prototype.bgColor = [255, 255, 255];
-	Fill.stroke.prototype.bgAlpha = 255;
+    var Fill = TeledrawCanvas.Tool.createTool('fill', 'crosshair');
+    var abs = Math.abs;
+
+    Fill.blur = true;
+    Fill.stroke.prototype.bgColor = [255, 255, 255];
+    Fill.stroke.prototype.bgAlpha = 255;
 
 
-	Fill.stroke.prototype.end = function (target) {
-		var w = this.ctx.canvas.width, h = this.ctx.canvas.height;
-		var pixels = this.ctx.getImageData(0,0, w,h);
-		var fill_mask = this.ctx.createImageData(w,h);
-		var color = this.color;
-		color[3]*=0xFF;
-		floodFillScanlineStack(pixels.data, fill_mask.data, target, w, h, this.color);
-		this.tmp_canvas = this.canvas.getTempCanvas();
-		var tmp_ctx = this.tmp_canvas.getContext('2d');
-		tmp_ctx.putImageData(fill_mask, 0, 0);
-		
-		if (Fill.blur) {
-			stackBlurCanvasRGBA(this.tmp_canvas, 1);
-			var tmp_data = tmp_ctx.getImageData(0, 0, w, h);
-			for (var i = 0, l = tmp_data.data.length; i < l; i += 4) {
-				if (tmp_data.data[i+3]/0xFF > 0.2) {
-					tmp_data.data[i] = color[0];
-					tmp_data.data[i+1] = color[1];
-					tmp_data.data[i+2] = color[2];
-					tmp_data.data[i+3] = Math.min(color[3], tmp_data.data[i+3] * 3);
-				}
-			}
-			tmp_ctx.putImageData(tmp_data, 0, 0);
-		}
-	};
+    Fill.stroke.prototype.end = function (target) {
+        var w = this.ctx.canvas.width, h = this.ctx.canvas.height;
+        var pixels = this.ctx.getImageData(0,0, w,h);
+        var fill_mask = this.ctx.createImageData(w,h);
+        var color = this.color;
+        color[3]*=0xFF;
+        floodFillScanlineStack(pixels.data, fill_mask.data, target, w, h, this.color);
+        this.tmp_canvas = this.canvas.getTempCanvas();
+        var tmp_ctx = this.tmp_canvas.getContext('2d');
+        tmp_ctx.putImageData(fill_mask, 0, 0);
 
-	Fill.stroke.prototype.draw = function () {
-		if (this.tmp_canvas) {
-        	this.ctx.drawImage(this.tmp_canvas, 0, 0);
-    	}
-	};
-	
-	function floodFillScanlineStack(dataFrom, dataTo, target, w, h, newColor) {
-		var stack = [[target.x, target.y]];
-		var oldColor = getColor(dataFrom, target.x, target.y, w);
-		var tolerance = Fill.tolerance;
-		var spanLeft, spanRight;
-		var color, dist, pt, x, y, y1;
-		var oppColor = TeledrawCanvas.util.opposite(oldColor);
-		oppColor[3]/=2;
-		while (stack.length) {
-			pt = stack.pop();
-			x = pt[0];
-			y1 = y = pt[1];
-        	while (y1 >= 0 && colorsEqual(getColor(dataFrom, x, y1, w), oldColor)) y1--;
-			y1++;
-			spanLeft = spanRight = false;
-			
-			while(y1 < h && colorsEqual(getColor(dataFrom, x, y1, w), oldColor))
-        	{
-				setColor(dataFrom, x, y1, w, oppColor);
-				setColor(dataTo, x, y1, w, newColor);
-				if (!spanLeft && x > 0 && colorsEqual(getColor(dataFrom, x - 1, y1, w), oldColor)) 
-				{
-					stack.push([x - 1, y1]);
-					spanLeft = true;
-				}
-				else if (spanLeft && x > 0 && colorsEqual(getColor(dataFrom, x - 1, y1, w), oldColor))
-				{
-					spanLeft = false;
-				}
-				if (!spanRight && x < w - 1 && colorsEqual(getColor(dataFrom, x + 1, y1, w), oldColor))
-				{
-					stack.push([x + 1, y1]);
-					spanRight = true;
-				}
-				else if (spanRight && x < w - 1 && colorsEqual(getColor(dataFrom, x + 1, y1, w), oldColor))
-				{
-					spanRight = false;
-				} 
-				y1++;
-			}
-		}
-	}
-	
-	function getColor(data, x, y, w) {
-		var start = (y * w + x) * 4;
-		return [
-			data[start],
-			data[start+1], 
-			data[start+2], 
-			data[start+3]
-		];
-	}
-	
-	function setColor(data, x, y, w, color) {
-		var start = (y * w + x) * 4;
-		data[start] = color[0];
-		data[start+1] = color[1];
-		data[start+2] = color[2];
-		data[start+3] = color[3];
-	}
-	
-	function colorDistance(col1, col2) {
-		return abs(col1[0] - col2[0]) + 
-				abs(col1[1] - col2[1]) + 
-				abs(col1[2] - col2[2]) + 
-				abs(col1[3] - col2[3]);
-	}
-	
-	function colorsEqual(col1, col2) {
-		return colorDistance(col1, col2) < 5;
-	}
+        if (Fill.blur) {
+            stackBlurCanvasRGBA(this.tmp_canvas, 1);
+            var tmp_data = tmp_ctx.getImageData(0, 0, w, h);
+            for (var i = 0, l = tmp_data.data.length; i < l; i += 4) {
+                if (tmp_data.data[i+3]/0xFF > 0.2) {
+                    tmp_data.data[i] = color[0];
+                    tmp_data.data[i+1] = color[1];
+                    tmp_data.data[i+2] = color[2];
+                    tmp_data.data[i+3] = Math.min(color[3], tmp_data.data[i+3] * 3);
+                }
+            }
+            tmp_ctx.putImageData(tmp_data, 0, 0);
+        }
+    };
+
+    Fill.stroke.prototype.draw = function () {
+        if (this.tmp_canvas) {
+            this.ctx.drawImage(this.tmp_canvas, 0, 0);
+        }
+    };
+
+    function floodFillScanlineStack(dataFrom, dataTo, target, w, h, newColor) {
+        var stack = [[target.x, target.y]];
+        var oldColor = getColor(dataFrom, target.x, target.y, w);
+        var tolerance = Fill.tolerance;
+        var spanLeft, spanRight;
+        var color, dist, pt, x, y, y1;
+        var oppColor = TeledrawCanvas.util.opposite(oldColor);
+        oppColor[3]/=2;
+        while (stack.length) {
+            pt = stack.pop();
+            x = pt[0];
+            y1 = y = pt[1];
+            while (y1 >= 0 && colorsEqual(getColor(dataFrom, x, y1, w), oldColor)) y1--;
+            y1++;
+            spanLeft = spanRight = false;
+
+            while(y1 < h && colorsEqual(getColor(dataFrom, x, y1, w), oldColor))
+            {
+                setColor(dataFrom, x, y1, w, oppColor);
+                setColor(dataTo, x, y1, w, newColor);
+                if (!spanLeft && x > 0 && colorsEqual(getColor(dataFrom, x - 1, y1, w), oldColor))
+                {
+                    stack.push([x - 1, y1]);
+                    spanLeft = true;
+                }
+                else if (spanLeft && x > 0 && colorsEqual(getColor(dataFrom, x - 1, y1, w), oldColor))
+                {
+                    spanLeft = false;
+                }
+                if (!spanRight && x < w - 1 && colorsEqual(getColor(dataFrom, x + 1, y1, w), oldColor))
+                {
+                    stack.push([x + 1, y1]);
+                    spanRight = true;
+                }
+                else if (spanRight && x < w - 1 && colorsEqual(getColor(dataFrom, x + 1, y1, w), oldColor))
+                {
+                    spanRight = false;
+                }
+                y1++;
+            }
+        }
+    }
+
+    function getColor(data, x, y, w) {
+        var start = (y * w + x) * 4;
+        return [
+            data[start],
+            data[start+1],
+            data[start+2],
+            data[start+3]
+        ];
+    }
+
+    function setColor(data, x, y, w, color) {
+        var start = (y * w + x) * 4;
+        data[start] = color[0];
+        data[start+1] = color[1];
+        data[start+2] = color[2];
+        data[start+3] = color[3];
+    }
+
+    function colorDistance(col1, col2) {
+        return abs(col1[0] - col2[0]) +
+                abs(col1[1] - col2[1]) +
+                abs(col1[2] - col2[2]) +
+                abs(col1[3] - col2[3]);
+    }
+
+    function colorsEqual(col1, col2) {
+        return colorDistance(col1, col2) < 5;
+    }
 })(TeledrawCanvas);
 
 /**
  * Grab tool
  */
 (function (TeledrawCanvas) {
-	var cursorUp = "hand, grab, -moz-grab, -webkit-grab, move",
-		cursorDown = "grabbing, -moz-grabbing, -webkit-grabbing, move";
-	
-	var Grab = TeledrawCanvas.Tool.createTool("grab", cursorUp);
+    var cursorUp = 'hand, grab, -moz-grab, -webkit-grab, move',
+        cursorDown = 'grabbing, -moz-grabbing, -webkit-grabbing, move';
 
-	Grab.prototype.move = function (down, from, to) {
-		var self = this;
-		if (down) {
-			clearTimeout(this._clearDeltasId);
-			cancelAnimationFrame(this._momentumId);
-			this.dx = to.xd - from.xd;
-			this.dy = to.yd - from.yd;
-			this.canvas.pan(this.dx, this.dy);
-			this._clearDeltasId = setTimeout(function () {
-				self.dx = self.dy = 0;
-			}, 100);
-		}
-	};
-	
-	Grab.prototype.down = function (pt) {
-		cancelAnimationFrame(this._momentumId);
-		this.canvas.cursor(cursorDown);
-	};
-	
-	Grab.prototype.up = function (pt) {
-		cancelAnimationFrame(this._momentumId);
-	    this.momentum(this.dx, this.dy);
-	    this.dx = this.dy = 0;
-		this.canvas.cursor(cursorUp);
-	};
-	
-	Grab.prototype.dblclick = function (pt) {
-		cancelAnimationFrame(this._momentumId);
-	    this.dx = this.dy = 0;
-	    var mult = 2;
-	    if (this.shiftKey) {
-	    	mult /= 4;
-	    }
-	    this.canvas.zoom(this.canvas.state.currentZoom*mult, pt.xd, pt.yd);
-	};
-	
-	Grab.prototype.momentum = function (dx, dy) {
-		var self = this;
-		if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
-			dx /= 1.1;
-			dy /= 1.1;
-	    	this.canvas.pan(dx, dy);
-	    	this._momentumId = requestAnimationFrame(function () {
-	    		self.momentum(dx, dy);
-	    	});
-	    }
-	}
+    var Grab = TeledrawCanvas.Tool.createTool('grab', cursorUp);
+
+    Grab.prototype.move = function (down, from, to) {
+        var self = this;
+        if (down) {
+            clearTimeout(this._clearDeltasId);
+            cancelAnimationFrame(this._momentumId);
+            this.dx = to.xd - from.xd;
+            this.dy = to.yd - from.yd;
+            this.canvas.pan(this.dx, this.dy);
+            this._clearDeltasId = setTimeout(function () {
+                self.dx = self.dy = 0;
+            }, 100);
+        }
+    };
+
+    Grab.prototype.down = function (pt) {
+        cancelAnimationFrame(this._momentumId);
+        this.canvas.cursor(cursorDown);
+    };
+
+    Grab.prototype.up = function (pt) {
+        cancelAnimationFrame(this._momentumId);
+        this.momentum(this.dx, this.dy);
+        this.dx = this.dy = 0;
+        this.canvas.cursor(cursorUp);
+    };
+
+    Grab.prototype.dblclick = function (pt) {
+        cancelAnimationFrame(this._momentumId);
+        this.dx = this.dy = 0;
+        var mult = 2;
+        if (this.shiftKey) {
+            mult /= 4;
+        }
+        this.canvas.zoom(this.canvas.state.currentZoom*mult, pt.xd, pt.yd);
+    };
+
+    Grab.prototype.momentum = function (dx, dy) {
+        var self = this;
+        if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) {
+            dx /= 1.1;
+            dy /= 1.1;
+            this.canvas.pan(dx, dy);
+            this._momentumId = requestAnimationFrame(function () {
+                self.momentum(dx, dy);
+            });
+        }
+    };
 })(TeledrawCanvas);
 /**
  * Line tool
  */
 (function (TeledrawCanvas) {
-	var Line = TeledrawCanvas.Tool.createTool("line", "crosshair");
-	
-	//Line.prototype.keydown = Canvas.ellipse.prototype.keydown;
-	//Line.prototype.keyup = Canvas.ellipse.prototype.keyup;
-	
-	Line.stroke.prototype.lineWidth = 1;
-	Line.stroke.prototype.lineCap = 'round';
-	Line.stroke.prototype.bgColor = [255, 255, 255];
-	Line.stroke.prototype.bgAlpha = 0;
-	
-	Line.stroke.prototype.start = function (pt) {
-	    this.first = pt;
-	};
+    var Line = TeledrawCanvas.Tool.createTool('line', 'crosshair');
 
-	Line.stroke.prototype.move = function (a, b) {
-	    this.second = b;
-	};
+    Line.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new Line.stroke(this.canvas, ctx);
+        stroke.first = { x: 0, y: 0 };
+        stroke.second = { x: canv.width, y: canv.height };
+        stroke.draw();
+        return canv;
+    };
 
-	Line.stroke.prototype.end = function (pt) {
-	    this.second = pt;
-	};
+    Line.stroke.prototype.lineCap = 'round';
 
-	Line.stroke.prototype.draw = function () {
-	    if (!this.first || !this.second) return;
-	    var first = _.extend({}, this.first),
-	    	second = _.extend({}, this.second),
-	    	a, x, y, pi = Math.PI;
-	    delete first.p;
-	    delete second.p;
-	    if (this.tool.shiftKey) {
-	    	x = second.x - first.x;
-	    	y = second.y - first.y;
-	    	a = Math.atan2(y, x);
-	    	
-	    	if ((a >= -pi*7/8 && a < -pi*5/8) ||
-	    		(a >= -pi*3/8 && a < -pi/8))
-	    	{
-	    		second.y = first.y - Math.abs(x); // NW, NE
-	    	} else
-	    	if ((a >= -pi*5/8 && a < -pi*3/8) ||
-	    		(a >= pi*3/8 && a < pi*5/8))
-	    	{
-	    		second.x = first.x; // N, S
-	    	} else
-	    	if ((a >= pi/8 && a < pi*3/8) || 
-	    		(a >= pi*5/8 && a < pi*7/8))
-	    	{
-	    		second.y = first.y + Math.abs(x); // SE, SW
-	    	} else {
-	    		second.y = first.y; // E, W
-	    	}
-	    }
-	    this.points = [first, second];
-	    TeledrawCanvas.tools['pencil'].stroke.prototype.draw.call(this);
-	};
+    Line.stroke.prototype.start = function (pt) {
+        this.first = pt;
+    };
+
+    Line.stroke.prototype.move = function (a, b) {
+        this.second = b;
+    };
+
+    Line.stroke.prototype.end = function (pt) {
+        this.second = pt;
+    };
+
+    Line.stroke.prototype.draw = function () {
+        if (!this.first || !this.second) return;
+        var first = _.extend({}, this.first),
+            second = _.extend({}, this.second),
+            a, x, y, pi = Math.PI;
+        delete first.p;
+        delete second.p;
+        if (this.tool.shiftKey) {
+            x = second.x - first.x;
+            y = second.y - first.y;
+            a = Math.atan2(y, x);
+
+            if ((a >= -pi*7/8 && a < -pi*5/8) ||
+                (a >= -pi*3/8 && a < -pi/8))
+            {
+                second.y = first.y - Math.abs(x); // NW, NE
+            } else
+            if ((a >= -pi*5/8 && a < -pi*3/8) ||
+                (a >= pi*3/8 && a < pi*5/8))
+            {
+                second.x = first.x; // N, S
+            } else
+            if ((a >= pi/8 && a < pi*3/8) ||
+                (a >= pi*5/8 && a < pi*7/8))
+            {
+                second.y = first.y + Math.abs(x); // SE, SW
+            } else {
+                second.y = first.y; // E, W
+            }
+        }
+        this.points = [first, second];
+        TeledrawCanvas.tools['pencil'].stroke.prototype.draw.call(this);
+    };
 })(TeledrawCanvas);
 
 /**
  * Pencil tool
  */
 (function (TeledrawCanvas) {
-	var Pencil = TeledrawCanvas.Tool.createTool("pencil", "crosshair");
-	
-	Pencil.stroke.prototype.lineWidth = 1;
-	Pencil.stroke.prototype.lineCap = 'round';
-	Pencil.stroke.prototype.smoothing = true;
+    var Pencil = TeledrawCanvas.Tool.createTool('pencil', 'crosshair');
 
-	Pencil.stroke.prototype.draw = function () {
-		var state = this.canvas.state,
-			ctx = this.ctx,
-			points = this.points,
-			shadowOffset = state.shadowOffset,
-			shadowBlur = state.shadowBlur,
-			lineWidth = state.lineWidth,
-			color = TeledrawCanvas.util.cssColor(state.color);
-		
-		ctx.globalAlpha = state.globalAlpha;
-		ctx.fillStyle = ctx.strokeStyle = color;
-	    ctx.miterLimit = 100000;
-	    if (shadowBlur > 0) {
-	    	ctx.shadowColor = color;
-			ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
-			ctx.shadowBlur = shadowBlur;
-	    	ctx.translate(-shadowOffset,-shadowOffset);
-	    }
-	    
-	    if (points.length === 1) {
-	   		// draw a single point
-			switch (this.lineCap) {
-				case 'round':
-					ctx.beginPath();
-					if (points[0].p) {
-						lineWidth *= points[0].p * 2;
-					}
-					ctx.arc(points[0].x, points[0].y, lineWidth / 2, 0, 2 * Math.PI, true);
-					ctx.closePath();
-					ctx.fill();
-					break;
-				case 'square':
-					ctx.fillRect(points[0].x - lineWidth/2, points[0].y - lineWidth/2, lineWidth, lineWidth);
-			}
-	    } else if (points.length > 1) {
-	        ctx.lineJoin = 'round';
-	        ctx.lineCap = this.lineCap;
-	        ctx.lineWidth = lineWidth;
-	    
-	    	if (points[0].p || points[1].p) {
-				ctx.beginPath();
-	    		drawLine(ctx, generatePressurePoints(points, lineWidth), this.smoothing);
-	    		ctx.closePath();
-	    		ctx.fill();
-	    	} else {
-				ctx.beginPath();
-				drawLine(ctx, points, this.smoothing);
-				ctx.stroke();
-			}
-	    }
-	};
-	
-	function generatePressurePoints(points, thickness) {
-		var path = {left:[], right:[]},
-			len = points.length,
-			lastp = points[0],
-			lastv = new Vector(lastp.x, lastp.y), 
-			currp, currv, left, right, tmp;
-		for (var i = 1, l = len; i < l; ++i) {
-			currp = points[i];
-			
-			// ignore this point if they didn't actually move
-			if (currp.x === lastp.x && currp.y === lastp.y) continue;
-			
-			currv = new Vector(currp.x, currp.y);
-			left = Vector.subtract(currv, lastv).unit().rotateZ(Math.PI/2);
-			right = Vector.subtract(currv, lastv).unit().rotateZ(-Math.PI/2);
-			
-			tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
-			path.left.push({ x: tmp.x, y: tmp.y });
-			
-			tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
-			path.right.unshift({ x: tmp.x, y: tmp.y });
-			
-			lastp = currp;
-			lastv = currv;
-		}
-		
-		
-		//add the last points
-		tmp = Vector(left).scale(lastp.p*thickness).add(lastv);
-		path.left.push({ x: tmp.x, y: tmp.y });
-		
-		tmp = Vector(right).scale(lastp.p*thickness).add(lastv);
-		path.right.unshift({ x: tmp.x, y: tmp.y });
-		
-		// combine them into one full path
-		result = path.left.concat(path.right);
-		result.push(path.left[0]);
-		return result;
-	}
-	
-	function drawLine(ctx, points, smoothing) {
-		if (points.length === 0) return;
-	    ctx.moveTo(points[0].x, points[0].y);
-		var prev = points[0],
-			prevprev = null, curr = prev, len = points.length;
-		for (var i = 1, l = len; i < l; ++i) {
-			curr = points[i];
+    Pencil.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new Pencil.stroke(this.canvas, ctx);
+        stroke.points = [{ x: canv.width/2, y: canv.height/2 }];
+        stroke.draw();
+        return canv;
+    };
 
-			if (prevprev && (prevprev.x == curr.x || prevprev.y == curr.y)) {
-				// hack to avoid weird linejoins cutting the line
-				curr.x += 0.1; 
-				curr.y += 0.1;
-			}
-			if (smoothing) {
-				var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
-				ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
-			} else {
-				ctx.lineTo(curr.x, curr.y);
-			}
-			prevprev = prev;
-			prev = points[i];
-		}
-		if (smoothing) {
-			ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
-		}
-	}
-	
-	function distance(p1, p2) {
-		return sqrt(pow2(p1.x - p2.x) + pow2(p1.y - p2.y));
-	}
-	
-	function avg(arr) {
-		var sum = 0,
-			len = arr.length;
-		for (var i = 0, l = len; i < l; i++) {
-			sum += +arr[i];
-		}
-		return sum/len;
-	}
+    Pencil.stroke.prototype.lineCap = 'round';
+    Pencil.stroke.prototype.smoothing = true;
+
+    Pencil.stroke.prototype.draw = function () {
+        var state = this.canvas.state,
+            ctx = this.ctx,
+            points = this.points,
+            shadowOffset = state.shadowOffset,
+            shadowBlur = state.shadowBlur,
+            lineWidth = state.lineWidth,
+            color = TeledrawCanvas.util.cssColor(state.color);
+
+        ctx.globalAlpha = state.globalAlpha;
+        ctx.fillStyle = ctx.strokeStyle = color;
+        ctx.miterLimit = 100000;
+        if (shadowBlur > 0) {
+            ctx.shadowColor = color;
+            ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
+            ctx.shadowBlur = shadowBlur;
+            ctx.translate(-shadowOffset,-shadowOffset);
+        }
+
+        if (points.length === 1) {
+               // draw a single point
+            switch (this.lineCap) {
+                case 'round':
+                    ctx.beginPath();
+                    if (points[0].p) {
+                        lineWidth *= points[0].p * 2;
+                    }
+                    ctx.arc(points[0].x, points[0].y, lineWidth / 2, 0, 2 * Math.PI, true);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                case 'square':
+                    ctx.fillRect(points[0].x - lineWidth/2, points[0].y - lineWidth/2, lineWidth, lineWidth);
+            }
+        } else if (points.length > 1) {
+            ctx.lineJoin = 'round';
+            ctx.lineCap = this.lineCap;
+            ctx.lineWidth = lineWidth;
+
+            if (points[0].p || points[1].p) {
+                ctx.beginPath();
+                drawLine(ctx, generatePressurePoints(points, lineWidth), this.smoothing);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                drawLine(ctx, points, this.smoothing);
+                ctx.stroke();
+            }
+        }
+    };
+
+    function generatePressurePoints(points, thickness) {
+        var path = {left:[], right:[]},
+            len = points.length,
+            lastp = points[0],
+            lastv = new Vector(lastp.x, lastp.y),
+            currp, currv, left, right, tmp;
+        for (var i = 1, l = len; i < l; ++i) {
+            currp = points[i];
+
+            // ignore this point if they didn't actually move
+            if (currp.x === lastp.x && currp.y === lastp.y) {
+                continue;
+            }
+
+            currv = new Vector(currp.x, currp.y);
+            left = Vector.subtract(currv, lastv).unit().rotateZ(Math.PI/2);
+            right = Vector.subtract(currv, lastv).unit().rotateZ(-Math.PI/2);
+
+            tmp = new Vector(left).scale(lastp.p*thickness).add(lastv);
+            path.left.push({ x: tmp.x, y: tmp.y });
+
+            tmp = new Vector(right).scale(lastp.p*thickness).add(lastv);
+            path.right.unshift({ x: tmp.x, y: tmp.y });
+
+            lastp = currp;
+            lastv = currv;
+        }
+
+
+        //add the last points
+        tmp = new Vector(left).scale(lastp.p*thickness).add(lastv);
+        path.left.push({ x: tmp.x, y: tmp.y });
+
+        tmp = new Vector(right).scale(lastp.p*thickness).add(lastv);
+        path.right.unshift({ x: tmp.x, y: tmp.y });
+
+        // combine them into one full path
+        result = path.left.concat(path.right);
+        result.push(path.left[0]);
+        return result;
+    }
+
+    function drawLine(ctx, points, smoothing) {
+        if (points.length === 0) {
+            return;
+        }
+        ctx.moveTo(points[0].x, points[0].y);
+        var prev = points[0],
+            prevprev = null, curr = prev, len = points.length;
+        for (var i = 1, l = len; i < l; ++i) {
+            curr = points[i];
+
+            if (prevprev && (prevprev.x === curr.x || prevprev.y === curr.y)) {
+                // hack to avoid weird linejoins cutting the line
+                curr.x += 0.1;
+                curr.y += 0.1;
+            }
+            if (smoothing) {
+                var mid = {x:(prev.x+curr.x)/2, y: (prev.y+curr.y)/2};
+                ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
+            } else {
+                ctx.lineTo(curr.x, curr.y);
+            }
+            prevprev = prev;
+            prev = points[i];
+        }
+        if (smoothing) {
+            ctx.quadraticCurveTo(prev.x, prev.y, curr.x, curr.y);
+        }
+    }
+
+    function distance(p1, p2) {
+        return sqrt(pow2(p1.x - p2.x) + pow2(p1.y - p2.y));
+    }
+
+    function avg(arr) {
+        var sum = 0,
+            len = arr.length;
+        for (var i = 0, l = len; i < l; i++) {
+            sum += +arr[i];
+        }
+        return sum/len;
+    }
 })(TeledrawCanvas);
 
 /**
  * Rectangle tool
  */
 (function (TeledrawCanvas) {
-	var Rectangle = TeledrawCanvas.Tool.createTool("rectangle", "crosshair");
+    var Rectangle = TeledrawCanvas.Tool.createTool('rectangle', 'crosshair');
 
-	Rectangle.stroke.prototype.bgColor = [255, 255, 255];
-	Rectangle.stroke.prototype.bgAlpha = 0;
-	Rectangle.stroke.prototype.lineWidth = 1;
+    Rectangle.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new Rectangle.stroke(this.canvas, ctx);
+        stroke.first = { x: 0, y: 0 };
+        stroke.second = { x: canv.width, y: canv.height };
+        stroke.draw();
+        return canv;
+    };
 
-	Rectangle.stroke.prototype.start = function (pt) {
-	    this.first = pt;
-	};
+    Rectangle.stroke.prototype.bgColor = [255, 255, 255];
+    Rectangle.stroke.prototype.bgAlpha = 0;
+    Rectangle.stroke.prototype.lineWidth = 1;
 
-	Rectangle.stroke.prototype.move = function (a, b) {
-	    this.second = b;
-	};
+    Rectangle.stroke.prototype.start = function (pt) {
+        this.first = pt;
+    };
 
-	Rectangle.stroke.prototype.end = function (pt) {
-	    this.second = pt;
-	};
+    Rectangle.stroke.prototype.move = function (a, b) {
+        this.second = b;
+    };
 
-	Rectangle.stroke.prototype.draw = function () {
-	    if (!this.first || !this.second) return;
-	    var first = this.first,
-	    	second = _.extend({}, this.second),
-	    	ctx = this.ctx,
-	    	state = this.canvas.state,
-			shadowOffset = state.shadowOffset,
-			shadowBlur = state.shadowBlur,
-			lineWidth = state.lineWidth,
-			color = TeledrawCanvas.util.cssColor(state.color);
-	    
-	    ctx.lineJoin = ctx.lineCap = "round";
-		ctx.globalAlpha = state.globalAlpha;
-		ctx.fillStyle = ctx.strokeStyle = color;
-		ctx.miterLimit = 100000;
-	    
-	    if (this.tool.shiftKey) {
-	    	var w = Math.abs(second.x - first.x);
-	    	second.y = first.y + (second.y > first.y ? w : -w);
-	    }
-	    
-	    if (this.tool.fill) {
-	    	drawRect(ctx, first, second);
-	    	ctx.fill();
-	    } else {
-	    	if (shadowBlur > 0) {
-				ctx.shadowColor = color;
-				ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
-				ctx.shadowBlur = shadowBlur;
-				ctx.translate(-shadowOffset,-shadowOffset);
-			}
-	    
-	        ctx.lineWidth = lineWidth;
-		    drawRect(ctx, first, second);
-			ctx.stroke();	
-	    }
-	};
-	
-	function drawRect(ctx, first, second) {
-	    ctx.beginPath();
-	    ctx.moveTo(first.x, first.y);
-	    ctx.lineTo(second.x, first.y);
-	    ctx.lineTo(second.x, second.y);
-	    ctx.lineTo(first.x, second.y);
-	    ctx.lineTo(first.x, first.y);
-	}
+    Rectangle.stroke.prototype.end = function (pt) {
+        this.second = pt;
+    };
+
+    Rectangle.stroke.prototype.draw = function () {
+        if (!this.first || !this.second) return;
+        var first = this.first,
+            second = _.extend({}, this.second),
+            ctx = this.ctx,
+            state = this.canvas.state,
+            shadowOffset = state.shadowOffset,
+            shadowBlur = state.shadowBlur,
+            lineWidth = state.lineWidth,
+            color = TeledrawCanvas.util.cssColor(state.color);
+
+        ctx.lineJoin = ctx.lineCap = 'round';
+        ctx.globalAlpha = state.globalAlpha;
+        ctx.fillStyle = ctx.strokeStyle = color;
+        ctx.miterLimit = 100000;
+
+        if (this.tool.shiftKey) {
+            var w = Math.abs(second.x - first.x);
+            second.y = first.y + (second.y > first.y ? w : -w);
+        }
+
+        if (this.tool.fill) {
+            drawRect(ctx, first, second);
+            ctx.fill();
+        } else {
+            if (shadowBlur > 0) {
+                ctx.shadowColor = color;
+                ctx.shadowOffsetX = ctx.shadowOffsetY = shadowOffset;
+                ctx.shadowBlur = shadowBlur;
+                ctx.translate(-shadowOffset,-shadowOffset);
+            }
+
+            ctx.lineWidth = lineWidth;
+            drawRect(ctx, first, second);
+            ctx.stroke();
+        }
+    };
+
+    function drawRect(ctx, first, second) {
+        ctx.beginPath();
+        ctx.moveTo(first.x, first.y);
+        ctx.lineTo(second.x, first.y);
+        ctx.lineTo(second.x, second.y);
+        ctx.lineTo(first.x, second.y);
+        ctx.lineTo(first.x, first.y);
+    }
 })(TeledrawCanvas);
 
 })();

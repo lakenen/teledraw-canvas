@@ -92,13 +92,14 @@
 
     function wacomIsEraser() {
         if (wacomPlugin && wacomPlugin.penAPI) {
-            return parseInt(wacomPlugin.penAPI.pointerType) === 3;
+            return parseInt(wacomPlugin.penAPI.pointerType, 10) === 3;
         }
     }
 
     function getOffset(el) {
         var _x = 0;
         var _y = 0;
+        // @TODO: replace isNaN with something safer
         while (el && !isNaN(el.offsetLeft) && !isNaN(el.offsetTop)) {
             _x += el.offsetLeft;
             _y += el.offsetTop;
@@ -107,11 +108,15 @@
         return { top: _y, left: _x };
     }
 
-    var Canvas = TeledrawCanvas.Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (w, h) {
-        var c = document.createElement('canvas');
-        if (w) c.width = w;
-        if (h) c.height = h;
-        return c;
+    var Canvas = TeledrawCanvas.Canvas = typeof _Canvas !== 'undefined' ? _Canvas : function (width, height) {
+        var canvas = document.createElement('canvas');
+        if (width) {
+            canvas.width = width;
+        }
+        if (height) {
+            canvas.height = height;
+        }
+        return canvas;
     };
 
     var API = function (elt, options) {
@@ -119,9 +124,8 @@
             element = self.element = elt.getContext ? elt : document.getElementById(elt);
             state = self.state = _.extend({}, defaultState, options);
 
-        if (typeof (new Canvas()).getContext != 'function') {
+        if (typeof (new Canvas()).getContext !== 'function') {
             throw new Error('Error: Your browser does not support HTML canvas!');
-            return false;
         }
 
         if (state.enableWacomSupport) {
@@ -310,11 +314,13 @@
             }
             lastmove = Date.now();
 
-            if (e.type == 'touchmove' && e.touches.length > 1) {
+            if (e.type === 'touchmove' && e.touches.length > 1) {
                 return true;
             }
-            if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
-            if (e.target == element || state.mouseDown) {
+            if (lastMoveEvent === 'touchmove' && e.type === 'mousemove') {
+                return;
+            }
+            if (e.target === element || state.mouseDown) {
                 var pt = getCoord(e);
                 state.tool.move(state.mouseDown, state.last, pt);
                 state.last = pt;
@@ -327,7 +333,7 @@
 
         function mouseDown(e) {
             var pt = state.last = getCoord(e);
-            if (e.type == 'touchstart' && e.touches.length > 1) {
+            if (e.type === 'touchstart' && e.touches.length > 1) {
                 return true;
             }
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
@@ -348,7 +354,7 @@
         function mouseUp(e) {
             removeEvent(window, e.type === 'mouseup' ? 'mouseup' : 'touchend', mouseUp);
 
-            if (e.type == 'touchend' && e.touches.length > 1) {
+            if (e.type === 'touchend' && e.touches.length > 1) {
                 return true;
             }
 
@@ -367,13 +373,13 @@
         }
 
         function gestureStart(evt) {
-            if (state.tool.name == 'grab') {
+            if (state.tool.name === 'grab') {
                 gInitZoom = state.currentZoom;
             }
         }
 
         function gestureChange(evt) {
-            if (state.tool.name == 'grab') {
+            if (state.tool.name === 'grab') {
                 var pt = state.last;
                 self.zoom(gInitZoom*evt.scale, pt.xd, pt.yd);
             }
@@ -440,9 +446,13 @@
             sw = floor(dw / zoom),
             sh = floor(dh / zoom);
         TeledrawCanvas.util.clear(dctx);
-        if (noTrigger !== true) this.trigger('display.update:before');
+        if (noTrigger !== true) {
+            this.trigger('display.update:before');
+        }
         dctx.drawImage(this._canvas, off.x, off.y, sw, sh, 0, 0, dw, dh);
-        if (noTrigger !== true) this.trigger('display.update:after');
+        if (noTrigger !== true) {
+            this.trigger('display.update:after');
+        }
     };
 
     /* this version attempts at better performance by drawing only the bounding rect of the changes
@@ -507,7 +517,7 @@
         do {
             c = cursors.shift();
             this.element.style.cursor = c;
-        } while (c.length && this.element.style.cursor != c);
+        } while (c.length && this.element.style.cursor !== c);
         return this;
     };
 
@@ -562,7 +572,7 @@
             self.clear(true);
             self.ctx().drawImage(img, 0, 0);
             self.updateDisplayCanvas();
-            if (typeof cb == 'function') {
+            if (typeof cb === 'function') {
                 cb.call(self);
             }
         };
@@ -575,7 +585,9 @@
         var data = this.getImageData().data;
         var len = data.length;
         for (var i = 0, l = len; i < l; ++i) {
-            if (data[i] !== 0) return false;
+            if (data[i] !== 0) {
+                return false;
+            }
         }
         return true;
     };
@@ -764,7 +776,7 @@
         x = absolute === true ? x/zoom : currentX - (x || 0)/zoom;
         y = absolute === true ? y/zoom : currentY - (y || 0)/zoom;
         x = floor(clamp(x, 0, maxWidth));
-        y = floor(clamp(y, 0, maxHeight))
+        y = floor(clamp(y, 0, maxHeight));
         self.state.currentOffset = { x: x, y: y };
         self.trigger('pan', self.state.currentOffset, { x: currentX, y: currentY });
         self.updateDisplayCanvas();

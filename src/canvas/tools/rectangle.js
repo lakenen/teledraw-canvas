@@ -2,7 +2,7 @@
  * Rectangle tool
  */
 (function (TeledrawCanvas) {
-    var Rectangle = TeledrawCanvas.Tool.createTool("rectangle", "crosshair");
+    var Rectangle = TeledrawCanvas.Tool.createTool('rectangle', 'crosshair');
 
     Rectangle.prototype.preview = function () {
         var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
@@ -41,7 +41,7 @@
             lineWidth = state.lineWidth,
             color = TeledrawCanvas.util.cssColor(state.color);
 
-        ctx.lineJoin = ctx.lineCap = "round";
+        ctx.lineJoin = ctx.lineCap = 'round';
         ctx.globalAlpha = state.globalAlpha;
         ctx.fillStyle = ctx.strokeStyle = color;
         ctx.miterLimit = 100000;

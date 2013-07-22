@@ -2,10 +2,10 @@
  * Grab tool
  */
 (function (TeledrawCanvas) {
-    var cursorUp = "hand, grab, -moz-grab, -webkit-grab, move",
-        cursorDown = "grabbing, -moz-grabbing, -webkit-grabbing, move";
+    var cursorUp = 'hand, grab, -moz-grab, -webkit-grab, move',
+        cursorDown = 'grabbing, -moz-grabbing, -webkit-grabbing, move';
 
-    var Grab = TeledrawCanvas.Tool.createTool("grab", cursorUp);
+    var Grab = TeledrawCanvas.Tool.createTool('grab', cursorUp);
 
     Grab.prototype.move = function (down, from, to) {
         var self = this;
@@ -53,5 +53,5 @@
                 self.momentum(dx, dy);
             });
         }
-    }
+    };
 })(TeledrawCanvas);

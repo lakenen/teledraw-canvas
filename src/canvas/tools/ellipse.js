@@ -2,7 +2,7 @@
  * Ellipse tool
  */
 (function (TeledrawCanvas) {
-    var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair"),
+    var Ellipse = TeledrawCanvas.Tool.createTool('ellipse', 'crosshair'),
         EllipseStrokePrototype = Ellipse.stroke.prototype;
 
     Ellipse.prototype.preview = function () {
@@ -45,7 +45,7 @@
             lineWidth = state.lineWidth,
             color = TeledrawCanvas.util.cssColor(state.color);
 
-        ctx.lineJoin = ctx.lineCap = "round";
+        ctx.lineJoin = ctx.lineCap = 'round';
         ctx.globalAlpha = state.globalAlpha;
         ctx.fillStyle = ctx.strokeStyle = color;
         ctx.miterLimit = 100000;
@@ -72,7 +72,7 @@
     };
 
     function drawEllipse(ctx, x, y, w, h) {
-        var kappa = .5522848;
+        var kappa = 0.5522848;
             ox = (w / 2) * kappa, // control point offset horizontal
             oy = (h / 2) * kappa, // control point offset vertical
             xe = x + w,           // x-end
