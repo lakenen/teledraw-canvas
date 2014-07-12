@@ -2,7 +2,7 @@
 
 Teledraw Canvas is an HTML5 Canvas drawing engine that is used in [Teledraw.com](http://teledraw.com/). It is currently dependent on [Underscore.js](http://documentcloud.github.com/underscore/) (1.x.x).
 
-You can see a very basic live demo at [lakenen.com/teledraw-canvas](http://lakenen.com/teledraw-canvas).
+You can see a very basic live demo [here](http://lakenen.com/old/teledraw-canvas).
 
 ## How to use
 
@@ -188,7 +188,7 @@ __0.11.0__
 
 (The MIT License)
 
-Copyright 2012 Cameron Lakenen
+Copyright 2014 Cameron Lakenen
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
