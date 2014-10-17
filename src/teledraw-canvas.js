@@ -160,7 +160,7 @@
             element = self.element,
             state = self.state,
             gInitZoom,
-            lastMoveEvent = NULL,
+            lastMoveEvent = null,
             lastmove = 0,
             lastpressure = 0;
 
@@ -196,13 +196,13 @@
             var pt = getCoord(evt);
             state.tool.enter(state.mouseDown, pt);
             state.last = pt;
-            state.mouseOver = TRUE;
+            state.mouseOver = true;
         }
 
         function mouseLeave(evt) {
             var pt = getCoord(evt);
             state.tool.leave(state.mouseDown, pt);
-            state.mouseOver = FALSE;
+            state.mouseOver = false;
         }
 
         function dblClick(evt) {
@@ -303,12 +303,12 @@
 
         function mouseMove(e) {
             if (Date.now() - lastmove < 25) {
-                return FALSE;
+                return false;
             }
             lastmove = Date.now();
 
             if (e.type == 'touchmove' && e.touches.length > 1) {
-                return TRUE;
+                return true;
             }
             if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
             if (e.target == element || state.mouseDown) {
@@ -318,7 +318,7 @@
                 self.trigger('mousemove', pt, e);
                 lastMoveEvent = e.type;
                 e.preventDefault();
-                return FALSE;
+                return false;
             }
         }
 
