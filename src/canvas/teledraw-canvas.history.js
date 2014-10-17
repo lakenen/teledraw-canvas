@@ -3,51 +3,51 @@
  */
 
 (function (TeledrawCanvas) {
-	var History = function (canvas) {
-		this.canvas = canvas;
-		this.rev = 0;
-		this.clear();
-	};
-	
-	History.prototype.clear = function () {
-		this.past = [];
-		this.current = null;
-		this.future = [];
-	};
+    var History = function (canvas) {
+        this.canvas = canvas;
+        this.rev = 0;
+        this.clear();
+    };
 
-	History.prototype.checkpoint = function () {
-	    if (this.past.length > this.canvas.state.maxHistory) {
-			this.past.shift().destroy();
-	    }
-	    
-	    if (this.current) {
-			this.past.push(this.current);
-	    }
-	    this.current = new TeledrawCanvas.Snapshot(this.canvas);
-	    this.future = [];
-	    this.rev++;
-	};
+    History.prototype.clear = function () {
+        this.past = [];
+        this.current = null;
+        this.future = [];
+    };
 
-	History.prototype.undo = function () {
-	    if (this._move(this.past, this.future)) {
-	    	this.rev--;
-	    }
-	};
+    History.prototype.checkpoint = function () {
+        if (this.past.length > this.canvas.state.maxHistory) {
+            this.past.shift().destroy();
+        }
 
-	History.prototype.redo = function () {
-	    if (this._move(this.future, this.past)) {
-	    	this.rev++;
-	    }
-	};
-	
-	History.prototype._move = function(from, to) {
-	    if (!from.length) return FALSE;
-	    if (!this.current) return FALSE;
-	    to.push(this.current);
-		this.current = from.pop();
-		this.current.restore();
-		return TRUE;
-	};
-	TeledrawCanvas.History = History;
+        if (this.current) {
+            this.past.push(this.current);
+        }
+        this.current = new TeledrawCanvas.Snapshot(this.canvas);
+        this.future = [];
+        this.rev++;
+    };
+
+    History.prototype.undo = function () {
+        if (this._move(this.past, this.future)) {
+            this.rev--;
+        }
+    };
+
+    History.prototype.redo = function () {
+        if (this._move(this.future, this.past)) {
+            this.rev++;
+        }
+    };
+
+    History.prototype._move = function(from, to) {
+        if (!from.length) return FALSE;
+        if (!this.current) return FALSE;
+        to.push(this.current);
+        this.current = from.pop();
+        this.current.restore();
+        return TRUE;
+    };
+    TeledrawCanvas.History = History;
 })(TeledrawCanvas);
 
