@@ -59,7 +59,7 @@
             }
         }
         this.points = [first, second];
-        TeledrawCanvas.tools['pencil'].stroke.prototype.draw.call(this);
+        TeledrawCanvas.tools.pencil.stroke.prototype.draw.call(this);
     };
 })(TeledrawCanvas);
 

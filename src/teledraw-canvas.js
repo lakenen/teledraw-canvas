@@ -14,14 +14,14 @@
 
     // global default state
     var defaultState = {
-        last: NULL,
-        currentTool: NULL,
-        previousTool: NULL,
-        tool: NULL,
-        mouseDown: FALSE,
-        mouseOver: FALSE,
-        width: NULL,
-        height: NULL,
+        last: null,
+        currentTool: null,
+        previousTool: null,
+        tool: null,
+        mouseDown: false,
+        mouseOver: false,
+        width: null,
+        height: null,
 
         currentZoom: 1,
         currentOffset: { x: 0, y: 0 },
@@ -30,9 +30,9 @@
         // related note: safari has trouble with high values for shadowOffset
         shadowOffset: 5000,
 
-        enableZoom: TRUE,
-        enableKeyboardShortcuts: TRUE,
-        enableWacomSupport: TRUE,
+        enableZoom: true,
+        enableKeyboardShortcuts: true,
+        enableWacomSupport: true,
 
         // default limits
         maxHistory: 10,
@@ -121,7 +121,6 @@
 
         if (typeof (new Canvas()).getContext != 'function') {
             throw new Error('Error: Your browser does not support HTML canvas!');
-            return false;
         }
 
         if (state.enableWacomSupport) {
@@ -161,7 +160,7 @@
             element = self.element,
             state = self.state,
             gInitZoom,
-            lastMoveEvent = NULL,
+            lastMoveEvent = null,
             lastmove = 0,
             lastpressure = 0;
 
@@ -197,13 +196,13 @@
             var pt = getCoord(evt);
             state.tool.enter(state.mouseDown, pt);
             state.last = pt;
-            state.mouseOver = TRUE;
+            state.mouseOver = true;
         }
 
         function mouseLeave(evt) {
             var pt = getCoord(evt);
             state.tool.leave(state.mouseDown, pt);
-            state.mouseOver = FALSE;
+            state.mouseOver = false;
         }
 
         function dblClick(evt) {
@@ -306,12 +305,12 @@
 
         function mouseMove(e) {
             if (Date.now() - lastmove < 25) {
-                return FALSE;
+                return false;
             }
             lastmove = Date.now();
 
             if (e.type == 'touchmove' && e.touches.length > 1) {
-                return TRUE;
+                return true;
             }
             if (lastMoveEvent == 'touchmove' && e.type == 'mousemove') return;
             if (e.target == element || state.mouseDown) {
@@ -321,49 +320,49 @@
                 self.trigger('mousemove', pt, e);
                 lastMoveEvent = e.type;
                 e.preventDefault();
-                return FALSE;
+                return false;
             }
         }
 
         function mouseDown(e) {
             var pt = state.last = getCoord(e);
             if (e.type == 'touchstart' && e.touches.length > 1) {
-                return TRUE;
+                return true;
             }
             addEvent(window, e.type === 'mousedown' ? 'mouseup' : 'touchend', mouseUp);
 
-            state.mouseDown = TRUE;
+            state.mouseDown = true;
             if (state.enableWacomSupport && wacomIsEraser() && state.currentTool !== 'eraser') {
                 self.setTool('eraser');
-                state.wacomWasEraser = TRUE;
+                state.wacomWasEraser = true;
             }
             state.tool.down(pt);
             self.trigger('mousedown', pt, e);
 
-            document.onselectstart = function() { return FALSE; };
+            document.onselectstart = function() { return false; };
             e.preventDefault();
-            return FALSE;
+            return false;
         }
 
         function mouseUp(e) {
             removeEvent(window, e.type === 'mouseup' ? 'mouseup' : 'touchend', mouseUp);
 
             if (e.type == 'touchend' && e.touches.length > 1) {
-                return TRUE;
+                return true;
             }
 
-            state.mouseDown = FALSE;
+            state.mouseDown = false;
             state.tool.up(state.last);
             self.trigger('mouseup', state.last, e);
 
-            if (state.wacomWasEraser === TRUE) {
+            if (state.wacomWasEraser === true) {
                 self.previousTool();
-                state.wacomWasEraser = FALSE;
+                state.wacomWasEraser = false;
             }
 
-            document.onselectstart = function() { return TRUE; };
+            document.onselectstart = function() { return true; };
             e.preventDefault();
-            return FALSE;
+            return false;
         }
 
         function gestureStart(evt) {
@@ -378,7 +377,7 @@
                 self.zoom(gInitZoom*evt.scale, pt.xd, pt.yd);
             }
             evt.preventDefault();
-            return FALSE;
+            return false;
         }
 
         function gestureEnd(evt) {
@@ -511,11 +510,11 @@
         return this;
     };
 
-    // clears the canvas and (unless noCheckpoint===TRUE) pushes to the undoable history
+    // clears the canvas and (unless noCheckpoint===true) pushes to the undoable history
     APIprototype.clear = function (noCheckpoint) {
         var self = this;
         TeledrawCanvas.util.clear(self.ctx());
-        if (noCheckpoint !== TRUE) {
+        if (noCheckpoint !== true) {
             self.history.checkpoint();
         }
         self.updateDisplayCanvas();
@@ -559,7 +558,7 @@
         var self = this,
             img = new Image();
         img.onload = function () {
-            self.clear(TRUE);
+            self.clear(true);
             self.ctx().drawImage(img, 0, 0);
             self.updateDisplayCanvas();
             if (typeof cb == 'function') {
@@ -582,7 +581,7 @@
 
     // clears the canvas and draws the supplied image, video or canvas element
     APIprototype.fromImage = APIprototype.fromVideo = APIprototype.fromCanvas = function (element) {
-        this.clear(TRUE);
+        this.clear(true);
         this.ctx().drawImage(element, 0, 0);
         this.updateDisplayCanvas();
         return this;
@@ -747,7 +746,7 @@
     };
 
     // pan the canvas to the given (relative) x,y position
-    // unless absolute === TRUE
+    // unless absolute === true
     // if no arguments are specified, returns the current absolute position
     APIprototype.pan = function (x, y, absolute) {
         if (arguments.length === 0) {
@@ -762,8 +761,8 @@
             currentY = self.state.currentOffset.y,
             maxWidth = self._canvas.width - floor(self._displayCanvas.width/zoom),
             maxHeight = self._canvas.height - floor(self._displayCanvas.height/zoom);
-        x = absolute === TRUE ? x/zoom : currentX - (x || 0)/zoom;
-        y = absolute === TRUE ? y/zoom : currentY - (y || 0)/zoom;
+        x = absolute === true ? x/zoom : currentX - (x || 0)/zoom;
+        y = absolute === true ? y/zoom : currentY - (y || 0)/zoom;
         x = floor(clamp(x, 0, maxWidth));
         y = floor(clamp(y, 0, maxHeight))
         self.state.currentOffset = { x: x, y: y };

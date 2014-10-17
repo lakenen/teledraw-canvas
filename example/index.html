@@ -7,27 +7,27 @@
 		html, body {
 			background: #888;
 		}
-		
+
 		canvas {
 			background-color: white;
 		}
-		
+
 	</style>
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 	<script type="text/javascript" src="jquery.mousewheel.js"></script>
-	<script type="text/javascript" src="teledraw-canvas.js"></script>
+	<script type="text/javascript" src="../build/teledraw-canvas.js"></script>
 	<script type="text/javascript">
 		var c;
 		$(function () {
-		
+
 			c = TeledrawCanvas('test-canvas', {
 				fullWidth: 1024,
 				fullHeight: 1024
 			});
-			
+
 			var grid = createGrid(1024, 512),
 				previewgrid =createGrid(1024, 512, 0.25);
-				
+
 			c.on('display.update:after', function () {
 				// draw gridlines
 				var scanv = this.canvas();
@@ -51,10 +51,10 @@
 			var previewctx = $('#preview-canvas').get(0).getContext('2d'),
 				tmppreview = $('#preview-canvas').clone().get(0)
 				tmppreviewctx = tmppreview.getContext('2d');
-				
+
 			c.on('zoom pan resize clear', _.throttle(redrawPreview, 30));
 			c.on('mousemove mouseup', _.throttle(redrawPreview, 150));
-			
+
 			c.zoom(0);
 			function createGrid(fullSize, tileSize, zoom) {
 				var grid = $('<canvas>').attr({width: fullSize, height: fullSize}).get(0);
@@ -98,7 +98,7 @@
 					previewctx.restore();
 				}
 			}
-			
+
 			$('#test-canvas').bind('mousewheel', function (e, d, dx, dy) {
 				c.pan(-dx*10, dy*10);
 				e.preventDefault();

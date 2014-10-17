@@ -41,12 +41,12 @@
     };
 
     History.prototype._move = function(from, to) {
-        if (!from.length) return FALSE;
-        if (!this.current) return FALSE;
+        if (!from.length) return false;
+        if (!this.current) return false;
         to.push(this.current);
         this.current = from.pop();
         this.current.restore();
-        return TRUE;
+        return true;
     };
     TeledrawCanvas.History = History;
 })(TeledrawCanvas);

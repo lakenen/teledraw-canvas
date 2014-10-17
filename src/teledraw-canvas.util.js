@@ -5,7 +5,7 @@
     var Util = function () { return Util; };
 
     Util.clear = function (ctx) {
-        var ctx = ctx.canvas ? ctx : /* (canvas) */ctx.getContext('2d');
+        ctx = ctx.canvas ? ctx : /* (canvas) */ctx.getContext('2d');
         ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
     };
 
@@ -70,7 +70,7 @@
             _max = max(r, g, b),
             _min = min(r, g, b),
             d, h, s, l = (_max + _min) / 2;
-        if (_max == _min) {
+        if (_max === _min) {
             h = s = 0;
         } else {
             d = _max - _min;
@@ -95,7 +95,7 @@
         var h = hsl[0],
             s = hsl[1]/100,
             l = hsl[2]/100;
-        if (s == 0)
+        if (s === 0)
             r = g = b = (l * 255);
         else {
             if (l <= 0.5)

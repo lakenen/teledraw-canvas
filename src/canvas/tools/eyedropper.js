@@ -27,13 +27,14 @@
     };
 
     EyeDropper.prototype.pick = function (pt) {
-        var previewContainer = this.previewContainer,
-            lightness,
+        var nope, lightness,
+            previewContainer = this.previewContainer,
             left = this.canvas.element.offsetLeft,
             top = this.canvas.element.offsetTop,
             pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
+
         this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
-        var lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
+        lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
         _.extend(previewContainer.style, {
             left: (left + pt.xd + 15) + 'px',
             top: (top + pt.yd + 5) + 'px',
@@ -43,7 +44,7 @@
         if (this.canvas.state.mouseOver) {
             // hack for chrome, since it seems to ignore this and not redraw for some reason...
             previewContainer.style.display='none';
-            previewContainer.offsetHeight; // no need to store this anywhere, the reference is enough
+            nope = previewContainer.offsetHeight;
             previewContainer.style.display='block';
         } else {
             previewContainer.style.display = 'none';
