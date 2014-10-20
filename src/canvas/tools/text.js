@@ -89,9 +89,10 @@
 
         ctx.globalAlpha = state.globalAlpha;
         ctx.fillStyle = ctx.strokeStyle = color;
-        ctx.textBaseline = 'alphabetical';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.font = h + 'px ' + (!!state.font ? state.font : 'Arial');
-        ctx.fillText(this.text || '', x, y + h / 2, w);
+        ctx.fillText(this.text, x + w / 2, y + h / 2, w);
     };
 
     function initHandlers(stroke) {
