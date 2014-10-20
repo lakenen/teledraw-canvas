@@ -49,12 +49,27 @@
             state = this.canvas.state,
             color = TeledrawCanvas.util.cssColor(state.color);
 
-        console.log(this.text, x, y, w, h)
+        if (w < 0) {
+            w = -w;
+            x -= w;
+        }
+        if (h < 0) {
+            h = -h;
+            y -= h;
+        }
 
         ctx.globalAlpha = state.globalAlpha;
         ctx.fillStyle = ctx.strokeStyle = color;
         ctx.textBaseline = 'top';
         ctx.font = h + 'px ' + (!!state.font ? state.font : 'Arial');
+
+        if (!this.finished) {
+            ctx.save();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        }
 
         if (this.tool.fill) {
             ctx.fillText(this.text, x, y, w);
@@ -78,6 +93,7 @@
 
             if (ev.keyCode === 13) { //enter
                 removeHandlers(stroke);
+                stroke.finished = true;
                 tool.draw();
                 stroke.destroy();
                 tool.currentStroke = null;
