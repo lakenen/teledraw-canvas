@@ -5,6 +5,15 @@
     var TextTool = TeledrawCanvas.Tool.createTool('text', 'text'),
         TextStrokePrototype = TextTool.stroke.prototype;
 
+    var BUFFER = 0.05;
+
+    var down = TextTool.prototype.down;
+    TextTool.prototype.down = function (pt) {
+        if (this.currentStroke) {
+            finish(this.currentStroke);
+        }
+        down.call(this, pt);
+    };
 
     TextTool.prototype.up = function (pt) {
         if (this.currentStroke) {
@@ -58,11 +67,6 @@
             y -= h;
         }
 
-        ctx.globalAlpha = state.globalAlpha;
-        ctx.fillStyle = ctx.strokeStyle = color;
-        ctx.textBaseline = 'top';
-        ctx.font = h + 'px ' + (!!state.font ? state.font : 'Arial');
-
         if (!this.finished) {
             ctx.save();
             ctx.lineWidth = 1;
@@ -71,11 +75,17 @@
             ctx.restore();
         }
 
-        if (this.tool.fill) {
-            ctx.fillText(this.text, x, y, w);
-        } else {
-            ctx.strokeText(this.text, x, y, w);
-        }
+        x += w * BUFFER;
+        w = w * (1 - BUFFER * 2);
+
+        y += h * BUFFER;
+        h = h * (1 - BUFFER * 2);
+
+        ctx.globalAlpha = state.globalAlpha;
+        ctx.fillStyle = ctx.strokeStyle = color;
+        ctx.textBaseline = 'hanging';
+        ctx.font = h + 'px ' + (!!state.font ? state.font : 'Arial');
+        ctx.fillText(this.text || '', x, y, w);
     };
 
     function initHandlers(stroke) {
@@ -89,15 +99,8 @@
             stroke.tool.draw();
         };
         stroke.keydownHandler = function (ev) {
-            var tool = stroke.tool;
-
             if (ev.keyCode === 13) { //enter
-                removeHandlers(stroke);
-                stroke.finished = true;
-                tool.draw();
-                stroke.destroy();
-                tool.currentStroke = null;
-                tool.canvas.history.checkpoint();
+                finish(stroke);
             }
         }
         addEvent(input, 'input', stroke.inputHandler);
@@ -110,6 +113,16 @@
             removeEvent(stroke.input, 'input', stroke.keydownHandler);
             stroke.input.parentNode.removeChild(stroke.input);
         }
+    }
+
+    function finish(stroke) {
+        var tool = stroke.tool;
+        removeHandlers(stroke);
+        stroke.finished = true;
+        tool.draw();
+        stroke.destroy();
+        tool.currentStroke = null;
+        tool.canvas.history.checkpoint();
     }
 
 })(TeledrawCanvas);

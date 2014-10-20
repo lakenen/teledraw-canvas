@@ -73,7 +73,6 @@
         };
 
         tool.prototype.move = function (mdown, from, to) {
-            console.log(to)
             if (mdown && this.currentStroke) {
                 this.currentStroke.points.push(to);
                 this.currentStroke.move(from, to);
