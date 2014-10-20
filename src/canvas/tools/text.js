@@ -50,7 +50,8 @@
 
     TextStrokePrototype.draw = function () {
         if (!this.first || !this.second) return;
-        var x = this.first.x,
+        var buffer,
+            x = this.first.x,
             y = this.first.y,
             w = this.second.x - x,
             h = this.second.y - y,
@@ -58,6 +59,7 @@
             state = this.canvas.state,
             color = TeledrawCanvas.util.cssColor(state.color);
 
+        // reposition x/y coords if h or w is negative
         if (w < 0) {
             w = -w;
             x -= w;
@@ -67,6 +69,9 @@
             y -= h;
         }
 
+        buffer = h * BUFFER;
+
+        // only draw the outline if not finished
         if (!this.finished) {
             ctx.save();
             ctx.lineWidth = 1;
@@ -75,17 +80,18 @@
             ctx.restore();
         }
 
-        x += w * BUFFER;
-        w = w * (1 - BUFFER * 2);
+        // add a buffer to keep the text inside the drawing area
+        x += buffer;
+        w -= buffer * 2;
 
-        y += h * BUFFER;
-        h = h * (1 - BUFFER * 2);
+        y += buffer;
+        h -= buffer * 2;
 
         ctx.globalAlpha = state.globalAlpha;
         ctx.fillStyle = ctx.strokeStyle = color;
-        ctx.textBaseline = 'hanging';
+        ctx.textBaseline = 'alphabetical';
         ctx.font = h + 'px ' + (!!state.font ? state.font : 'Arial');
-        ctx.fillText(this.text || '', x, y, w);
+        ctx.fillText(this.text || '', x, y + h / 2, w);
     };
 
     function initHandlers(stroke) {
