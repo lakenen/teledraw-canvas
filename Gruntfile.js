@@ -21,7 +21,7 @@ module.exports = function (grunt) {
         uglify: {
             options: {
                 mangle: true,
-                compress: true,
+                compress: {},
                 preserveComments: 'some'
             },
             dist: {
@@ -68,7 +68,7 @@ module.exports = function (grunt) {
         }
     });
 
-    grunt.registerTask('default', ['jshint', 'concat', 'uglify']);
-    grunt.registerTask('release', ['default', 'copy']);
+    grunt.registerTask('default', ['jshint', 'concat']);
+    grunt.registerTask('release', ['default', 'uglify', 'copy']);
     grunt.registerTask('serve', ['default', 'connect']);
 };

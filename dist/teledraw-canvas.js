@@ -1,4 +1,4 @@
-/*! Teledraw Canvas - v0.12.0 | (c) 2014 Cameron Lakenen */
+/*! Teledraw Canvas - v0.13.1 | (c) 2016 Cameron Lakenen */
 
 (function () {
 
@@ -1705,7 +1705,7 @@ Vector.create = function (o) {
 
     // returns a CSS-style rgb(a) string for the given RGBA array
     Util.cssColor = function (rgba) {
-        if (rgba.length == 3) {
+        if (rgba.length === 3) {
             return "rgb(" +  floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + ")";
         }
         return "rgba(" + floor(rgba[0]) + "," + floor(rgba[1]) + "," + floor(rgba[2]) + "," + rgba[3] + ")";
@@ -1846,6 +1846,7 @@ Vector.create = function (o) {
             return color;
         }
 
+        var channels;
         var ok = false, r, g, b, a;
         color_string = getRGB(color_string);
 
@@ -2174,15 +2175,13 @@ Vector.create = function (o) {
                         self.setTool('line');
                         break;
                     case 79: // o
-                        self.setTool('ellipse');
-                        //Canvas.getTool().setFill(e.shiftKey === true);
+                    self.setTool((e.shiftKey ? 'filled-' : '')+'ellipse');
                         break;
                     case 80: // p
                         self.setTool('pencil');
                         break;
                     case 82: // r
-                        self.setTool('rectangle');
-                        //Canvas.getTool().setFill(e.shiftKey === true);
+                    self.setTool((e.shiftKey ? 'filled-' : '')+'rectangle');
                         break;
                     case 90: // z
                         if (state.mouseDown) {
@@ -3003,6 +3002,61 @@ Vector.create = function (o) {
 
 
 (function (TeledrawCanvas) {
+    var Arrow = TeledrawCanvas.Tool.createTool("arrow", "crosshair");
+
+    Arrow.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canv.width, canv.height);
+        var stroke = new Arrow.stroke(this.canvas, ctx);
+        stroke.points = [{ x: canv.width * 0.25, y: canv.height * 0.25 }, { x: canv.width * 0.75, y: canv.height * 0.75 }];
+        stroke.draw();
+        return canv;
+    }
+
+
+    Arrow.stroke.prototype.lineWidth = 1;
+    Arrow.stroke.prototype.lineCap = 'round';
+
+    Arrow.stroke.prototype.move = function (a, b) {
+        this.last = a;
+        this.current = b;
+    };
+
+    Arrow.stroke.prototype.draw = function () {
+        TeledrawCanvas.tools.pencil.stroke.prototype.draw.call(this);
+
+        var state = this.canvas.state,
+            ctx = this.ctx,
+            edgeLength = Math.max(10, state.lineWidth * 2),
+            currv, tmpv, leftv, rightv, frontv;
+
+        if (this.ended && this.last && this.current) {
+            tmpv = new Vector(this.last.x, this.last.y);
+            currv = new Vector(this.current.x, this.current.y);
+            tmpv = Vector.subtract(currv, tmpv).unit();
+            leftv = new Vector(tmpv).rotateZ(Math.PI/2).scale(edgeLength).add(currv);
+            rightv = new Vector(tmpv).rotateZ(-Math.PI/2).scale(edgeLength).add(currv);
+            frontv = new Vector(tmpv).scale(edgeLength).add(currv);
+            ctx.beginPath();
+            ctx.moveTo(this.current.x, this.current.y);
+            ctx.lineTo(leftv.x, leftv.y);
+            ctx.lineTo(frontv.x, frontv.y);
+            ctx.lineTo(rightv.x, rightv.y);
+            ctx.lineTo(this.current.x, this.current.y);
+            ctx.closePath();
+            ctx.fill();
+        }
+    };
+
+    Arrow.stroke.prototype.end = function () {
+        this.ended = true;
+    };
+})(TeledrawCanvas);
+
+
+(function (TeledrawCanvas) {
     var Ellipse = TeledrawCanvas.Tool.createTool("ellipse", "crosshair"),
         EllipseStrokePrototype = Ellipse.stroke.prototype;
 
@@ -3090,6 +3144,24 @@ Vector.create = function (o) {
         ctx.closePath();
     }
 
+
+    var FilledEllipse = TeledrawCanvas.Tool.createTool("filled-ellipse", "crosshair");
+
+    FilledEllipse.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new FilledEllipse.stroke(this.canvas, ctx);
+        stroke.tool = this;
+        var w = canv.width, h = canv.height;
+        stroke.first = { x: w*0.1, y: h*0.1 };
+        stroke.second = { x: w*0.9, y: h*0.9 };
+        console.log(stroke);
+        stroke.draw();
+        return canv;
+    };
+    _.extend(FilledEllipse.stroke.prototype, Ellipse.stroke.prototype);
+    FilledEllipse.prototype.fill = true;
+
 })(TeledrawCanvas);
 
 
@@ -3139,18 +3211,17 @@ Vector.create = function (o) {
     EyeDropper.prototype.preview = function () {
         var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
         var ctx = canv.getContext('2d');
-        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color);
+        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.color || [0,0,0,0]);
         ctx.fillRect(0, 0, canv.width, canv.height);
         return canv;
     };
 
     EyeDropper.prototype.pick = function (pt) {
-        var nope, lightness,
+        var none, lightness,
             previewContainer = this.previewContainer,
             left = this.canvas.element.offsetLeft,
             top = this.canvas.element.offsetTop,
             pixel = this.canvas._displayCtx.getImageData(pt.xd,pt.yd,1,1).data;
-
         this.color = TeledrawCanvas.util.rgba2rgb(Array.prototype.slice.call(pixel));
         lightness = TeledrawCanvas.util.rgb2hsl(this.color)[2];
         _.extend(previewContainer.style, {
@@ -3162,7 +3233,7 @@ Vector.create = function (o) {
         if (this.canvas.state.mouseOver) {
             // hack for chrome, since it seems to ignore this and not redraw for some reason...
             previewContainer.style.display='none';
-            nope = previewContainer.offsetHeight;
+            none = previewContainer.offsetHeight; // no need to store this anywhere, the reference is enough
             previewContainer.style.display='block';
         } else {
             previewContainer.style.display = 'none';
@@ -3196,12 +3267,16 @@ Vector.create = function (o) {
 
 (function (TeledrawCanvas) {
     var Fill = TeledrawCanvas.Tool.createTool("fill", "crosshair");
-    var abs = Math.abs;
+
+    Fill.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        ctx.fillStyle = TeledrawCanvas.util.cssColor(this.canvas.getColor());
+        ctx.fillRect(0, 0, canv.width, canv.height);
+        return canv;
+    }
 
     Fill.blur = true;
-    Fill.stroke.prototype.bgColor = [255, 255, 255];
-    Fill.stroke.prototype.bgAlpha = 255;
-
 
     Fill.stroke.prototype.end = function (target) {
         var w = this.ctx.canvas.width, h = this.ctx.canvas.height;
@@ -3601,10 +3676,6 @@ Vector.create = function (o) {
         this.second = b;
     };
 
-    Rectangle.stroke.prototype.end = function (pt) {
-        this.second = pt;
-    };
-
     Rectangle.stroke.prototype.draw = function () {
         if (!this.first || !this.second) return;
         var first = this.first,
@@ -3651,7 +3722,159 @@ Vector.create = function (o) {
         ctx.lineTo(first.x, second.y);
         ctx.lineTo(first.x, first.y);
     }
+
+
+    var FilledRectangle = TeledrawCanvas.Tool.createTool("filled-rectangle", "crosshair");
+
+    FilledRectangle.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new FilledRectangle.stroke(this.canvas, ctx);
+        stroke.tool = this;
+        var w = canv.width, h = canv.height;
+        stroke.first = { x: w*0.1, y: h*0.1 };
+        stroke.second = { x: w*0.9, y: h*0.9 };
+        stroke.draw();
+        return canv;
+    };
+    _.extend(FilledRectangle.stroke.prototype, Rectangle.stroke.prototype);
+    FilledRectangle.prototype.fill = true;
+
 })(TeledrawCanvas);
+
+(function (TeledrawCanvas) {
+    var TextTool = TeledrawCanvas.Tool.createTool('text', 'text'),
+        TextStrokePrototype = TextTool.stroke.prototype;
+
+    var BUFFER = 0.05;
+
+    var down = TextTool.prototype.down;
+    TextTool.prototype.down = function (pt) {
+        if (this.currentStroke) {
+            finish(this.currentStroke);
+        }
+        down.call(this, pt);
+    };
+
+    TextTool.prototype.up = function (pt) {
+        if (this.currentStroke) {
+            this.currentStroke.end(pt);
+            this.currentStroke.draw();
+            initHandlers(this.currentStroke);
+        }
+        this.canvas.trigger('tool.up');
+    };
+
+    TextTool.prototype.preview = function () {
+        var canv = TeledrawCanvas.Tool.prototype.preview.apply(this, arguments);
+        var ctx = canv.getContext('2d');
+        var stroke = new TextTool.stroke(this.canvas, ctx);
+        stroke.first = { x: 0, y: 0 };
+        stroke.second = { x: canv.width, y: canv.height };
+        stroke.text = 'Aa';
+        stroke.draw();
+        return canv;
+    };
+
+    TextStrokePrototype.start = function (pt) {
+        this.text = '';
+        this.first = pt;
+    };
+
+    TextStrokePrototype.move = function (a, b) {
+        this.second = b;
+    };
+
+    TextStrokePrototype.end = function (pt) {
+        this.second = pt;
+    };
+
+    TextStrokePrototype.draw = function () {
+        if (!this.first || !this.second) return;
+        var buffer,
+            x = this.first.x,
+            y = this.first.y,
+            w = this.second.x - x,
+            h = this.second.y - y,
+            ctx = this.ctx,
+            state = this.canvas.state,
+            color = TeledrawCanvas.util.cssColor(state.color);
+
+        // reposition x/y coords if h or w is negative
+        if (w < 0) {
+            w = -w;
+            x -= w;
+        }
+        if (h < 0) {
+            h = -h;
+            y -= h;
+        }
+
+        buffer = h * BUFFER;
+
+        // only draw the outline if not finished
+        if (!this.finished) {
+            ctx.save();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        }
+
+        // add a buffer to keep the text inside the drawing area
+        x += buffer;
+        w -= buffer * 2;
+
+        y += buffer;
+        h -= buffer * 2;
+
+        ctx.globalAlpha = state.globalAlpha;
+        ctx.fillStyle = ctx.strokeStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = h + 'px ' + (!!state.font ? state.font : 'Arial');
+        ctx.fillText(this.text, x + w / 2, y + h / 2, w);
+    };
+
+    function initHandlers(stroke) {
+        var input = document.createElement('input');
+        input.style.opacity = 0;
+        document.body.appendChild(input);
+        input.focus();
+        stroke.input = input;
+        stroke.inputHandler = function () {
+            stroke.text = input.value;
+            stroke.tool.draw();
+        };
+        stroke.keydownHandler = function (ev) {
+            if (ev.keyCode === 13) { //enter
+                finish(stroke);
+            }
+        }
+        addEvent(input, 'input', stroke.inputHandler);
+        addEvent(input, 'keydown', stroke.keydownHandler);
+    }
+
+    function removeHandlers(stroke) {
+        if (stroke.input) {
+            removeEvent(stroke.input, 'input', stroke.inputHandler);
+            removeEvent(stroke.input, 'input', stroke.keydownHandler);
+            stroke.input.parentNode.removeChild(stroke.input);
+        }
+    }
+
+    function finish(stroke) {
+        var tool = stroke.tool;
+        removeHandlers(stroke);
+        stroke.finished = true;
+        tool.draw();
+        stroke.destroy();
+        tool.currentStroke = null;
+        tool.canvas.history.checkpoint();
+    }
+
+})(TeledrawCanvas);
+
 
 
 })();

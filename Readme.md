@@ -23,13 +23,13 @@ var canvas = new TeledrawCanvas('test-canvas', {
 	height: 512,
 	fullWidth: 1024,
 	fullHeight: 1024,
-	
+
 	maxHistory: 20,
 	minStrokeSize: 500,
 	maxStrokeSize: 10000,
 	minStrokeSoftness: 0,
 	maxStrokeSoftness: 100,
-	
+
 	enableZoom: true, // true by default
 	maxZoom: 8 // 800%
 });
@@ -64,7 +64,7 @@ canvas.setColor([255, 0, 0, 0.5]);
 
 ### Picking a tool
 
-Currently, the tools available are 'pencil', 'eraser', 'fill', 'rectangle', 'line', 'ellipse', 'eyedropper' and (if zoom is enabled) 'grab'. You can select them with `setTool`.
+Currently, the tools available are 'pencil', 'arrow', 'eraser', 'fill', 'rectangle', 'line', 'ellipse', 'eyedropper' and (if zoom is enabled) 'grab'. You can select them with `setTool`.
 
 ```js
 // pencil
@@ -190,7 +190,7 @@ __0.11.0__
 
 
 
-## License 
+## License
 
 (The MIT License)
 
