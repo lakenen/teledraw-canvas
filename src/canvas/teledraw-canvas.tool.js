@@ -14,7 +14,7 @@
         if (key === 16) {
             this.shiftKey = true;
             if (mouseDown) {
-                this._updateBoundaries({});
+                this.updateBoundaries();
                 this.draw();
             }
         }
@@ -23,7 +23,7 @@
         if (key === 16) {
             this.shiftKey = false;
             if (mouseDown) {
-                this._updateBoundaries({});
+                this.updateBoundaries();
                 this.draw();
             }
         }
@@ -68,7 +68,7 @@
             this.currentStroke.save();
             this.currentStroke.points.push(pt);
             this.currentStroke.start(pt);
-            this._updateBoundaries(pt);
+            this.updateBoundaries(pt);
             this.draw();
         };
 
@@ -76,7 +76,7 @@
             if (mdown && this.currentStroke) {
                 this.currentStroke.points.push(to);
                 this.currentStroke.move(from, to);
-                this._updateBoundaries(to);
+                this.updateBoundaries(to);
                 this.draw();
             }
         };
@@ -100,10 +100,10 @@
             this.currentStroke.ctx.restore();
         };
 
-        tool.prototype._updateBoundaries = function (pt) {
+        tool.prototype.updateBoundaries = function (pt) {
             var stroke = this.currentStroke,
                 canvas = stroke.ctx.canvas,
-                strokeSize = this.canvas.state.shadowBlur+this.canvas.state.lineWidth;
+                strokeSize = this.canvas.state.shadowBlur + this.canvas.state.lineWidth;
             if (this.shiftKey) {
                 // hack to avoid bugginess when shift keying for ellipse, line and rect
                 stroke.tl.x = stroke.tl.y = 0;
@@ -111,17 +111,19 @@
                 stroke.br.y = canvas.height;
                 return;
             }
-            if (pt.x - strokeSize < stroke.tl.x) {
-                stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
-            }
-            if (pt.x + strokeSize > stroke.br.x) {
-                stroke.br.x = clamp(floor(pt.x + strokeSize), 0, canvas.width);
-            }
-            if (pt.y - strokeSize < stroke.tl.y) {
-                stroke.tl.y = clamp(floor(pt.y - strokeSize), 0, canvas.height);
-            }
-            if (pt.y + strokeSize > stroke.br.y) {
-                stroke.br.y = clamp(floor(pt.y + strokeSize), 0, canvas.height);
+            if (pt) {
+                if (pt.x - strokeSize < stroke.tl.x) {
+                    stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
+                }
+                if (pt.x + strokeSize > stroke.br.x) {
+                    stroke.br.x = clamp(floor(pt.x + strokeSize), 0, canvas.width);
+                }
+                if (pt.y - strokeSize < stroke.tl.y) {
+                    stroke.tl.y = clamp(floor(pt.y - strokeSize), 0, canvas.height);
+                }
+                if (pt.y + strokeSize > stroke.br.y) {
+                    stroke.br.y = clamp(floor(pt.y + strokeSize), 0, canvas.height);
+                }
             }
         };
 

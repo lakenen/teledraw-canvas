@@ -28,7 +28,7 @@
         this.second = pt;
     };
 
-    Line.stroke.prototype.draw = function () {
+    Line.stroke.prototype.drawLine = function () {
         if (!this.first || !this.second) return;
         var first = _.extend({}, this.first),
             second = _.extend({}, this.second),
@@ -59,6 +59,10 @@
             }
         }
         this.points = [first, second];
+    };
+
+    Line.stroke.prototype.draw = function () {
+        Line.stroke.prototype.drawLine.call(this);
         TeledrawCanvas.tools.pencil.stroke.prototype.draw.call(this);
     };
 })(TeledrawCanvas);
