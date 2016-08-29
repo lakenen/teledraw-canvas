@@ -64,7 +64,7 @@ canvas.setColor([255, 0, 0, 0.5]);
 
 ### Picking a tool
 
-Currently, the tools available are 'pencil', 'arrow', 'eraser', 'fill', 'rectangle', 'line', 'ellipse', 'eyedropper' and (if zoom is enabled) 'grab'. You can select them with `setTool`.
+Currently, the tools available are 'pencil', 'arrow', 'line-arrow', 'eraser', 'fill', 'rectangle', 'line', 'ellipse', 'eyedropper' and (if zoom is enabled) 'grab'. You can select them with `setTool`.
 
 ```js
 // pencil
@@ -163,9 +163,13 @@ Teledraw Canvas provides a ton of flexibility when it comes to adding new tools.
 
 ## Tests
 
-Coming soon!
+Coming soon! (lol, or never)
+
 
 ## Changelog
+
+__0.14.0__
+* Added arrow and line-arrow tools
 
 __0.13.1__
 * Fixed preview for filled versions of ellipse and rectangle tools
@@ -189,12 +193,11 @@ __0.11.0__
 * Several bugfixes
 
 
-
 ## License
 
 (The MIT License)
 
-Copyright 2014 Cameron Lakenen
+Copyright 2016 Cameron Lakenen
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
