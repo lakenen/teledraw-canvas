@@ -24,12 +24,7 @@
 
     var updateBoundaries = Arrow.prototype.updateBoundaries;
     Arrow.prototype.updateBoundaries = LineArrow.prototype.updateBoundaries = function () {
-        // TeledrawCanvas.Tool.prototype.updateBoundaries.call(this, pt);
         var tool = this;
-        // var stroke = this.currentStroke,
-        //     canvas = stroke.ctx.canvas,
-        //     strokeSize = this.canvas.state.shadowBlur + this.canvas.state.lineWidth;
-
         // update the box if the arrow falls outside
         if (this.currentStroke.last && this.currentStroke.current) {
             var a = this.currentStroke.last,
@@ -38,18 +33,6 @@
                 vectors = calculateArrowVectors(a, b, edgeLength);
             _.values(vectors).forEach(function (pt) {
                 updateBoundaries.call(tool, pt);
-                // if (pt.x - strokeSize < stroke.tl.x) {
-                //     stroke.tl.x = clamp(floor(pt.x - strokeSize), 0, canvas.width);
-                // }
-                // if (pt.x + strokeSize > stroke.br.x) {
-                //     stroke.br.x = clamp(floor(pt.x + strokeSize), 0, canvas.width);
-                // }
-                // if (pt.y - strokeSize < stroke.tl.y) {
-                //     stroke.tl.y = clamp(floor(pt.y - strokeSize), 0, canvas.height);
-                // }
-                // if (pt.y + strokeSize > stroke.br.y) {
-                //     stroke.br.y = clamp(floor(pt.y + strokeSize), 0, canvas.height);
-                // }
             });
         }
     };
@@ -111,6 +94,9 @@
     };
     LineArrowStroke.draw = function () {
         TeledrawCanvas.tools.line.stroke.prototype.draw.call(this);
+        // update points because they might be using shift key
+        this.last = this.points[0];
+        this.current = this.points[1];
         ArrowStroke.drawArrow.call(this);
     };
 
