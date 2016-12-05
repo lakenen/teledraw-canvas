@@ -19,19 +19,19 @@ var canvas = new TeledrawCanvas('test-canvas');
 
 // with options
 var canvas = new TeledrawCanvas('test-canvas', {
-	width: 512,
-	height: 512,
-	fullWidth: 1024,
-	fullHeight: 1024,
+    width: 512,
+    height: 512,
+    fullWidth: 1024,
+    fullHeight: 1024,
 
-	maxHistory: 20,
-	minStrokeSize: 500,
-	maxStrokeSize: 10000,
-	minStrokeSoftness: 0,
-	maxStrokeSoftness: 100,
+    maxHistory: 20,
+    minStrokeSize: 500,
+    maxStrokeSize: 10000,
+    minStrokeSoftness: 0,
+    maxStrokeSoftness: 100,
 
-	enableZoom: true, // true by default
-	maxZoom: 8 // 800%
+    enableZoom: true, // true by default
+    maxZoom: 8 // 800%
 });
 ```
 
@@ -167,6 +167,9 @@ Coming soon! (lol, or never)
 
 
 ## Changelog
+
+__0.14.1__
+* Fix bug with line-arrow tool when using shift key
 
 __0.14.0__
 * Added arrow and line-arrow tools

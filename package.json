@@ -1,7 +1,7 @@
 {
   "name": "teledraw-canvas",
   "description": "Teledraw Canvas is an HTML5 Canvas drawing engine that is used in [Teledraw.com](http://teledraw.com/). It is currently dependent on [Underscore.js](http://documentcloud.github.com/underscore/) (1.x.x).",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "main": "dist/teledraw-canvas.js",
   "directories": {
     "example": "example"
